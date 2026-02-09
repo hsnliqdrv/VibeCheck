@@ -1,0 +1,1885 @@
+openapi: 3.0.3
+info:
+  title: VibeCheck - Aesthetic Social Media Companion API
+  description: |
+    API specification for VibeCheck, an aesthetic social media companion application.
+    Users can curate content across multiple categories (cinema, music, games, books, travel),
+    share their aesthetic identity (aura), earn badges through gamification, and discover
+    like-minded users in aesthetic communities.
+  version: 1.0.0
+  contact:
+    name: VibeCheck Support
+  license:
+    name: MIT
+
+servers:
+  - url: https://api.vibecheck.com/v1
+    description: Production server
+  - url: https://staging-api.vibecheck.com/v1
+    description: Staging server
+  - url: http://localhost:3000/api/v1
+    description: Development server
+
+tags:
+  - name: Content
+    description: Browse and manage content across categories
+  - name: User Profile
+    description: User profile and authentication endpoints
+  - name: Aura
+    description: User aesthetic identity and aura matching
+  - name: Badges & Gamification
+    description: Badges, levels, and curator progression
+  - name: Social
+    description: Community posts, rooms, and discovery
+  - name: Search
+    description: Search and filtering operations
+
+paths:
+  /auth/login:
+    post:
+      tags:
+        - User Profile
+      summary: User login
+      operationId: loginUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  format: password
+            example:
+              email: user@example.com
+              password: password123
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                  user:
+                    $ref: '#/components/schemas/User'
+              example:
+                token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
+                user:
+                  userId: "u_123"
+                  email: user@example.com
+                  username: aesthetic_anna
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /auth/register:
+    post:
+      tags:
+        - User Profile
+      summary: User registration
+      operationId: registerUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+                - username
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  format: password
+                username:
+                  type: string
+                  minLength: 3
+                  maxLength: 20
+      responses:
+        '201':
+          description: Registration successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                  user:
+                    $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          description: Email or username already exists
+
+  /users/profile:
+    get:
+      tags:
+        - User Profile
+      summary: Get current user profile
+      operationId: getUserProfile
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: User profile retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+    put:
+      tags:
+        - User Profile
+      summary: Update user profile
+      operationId: updateUserProfile
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                bio:
+                  type: string
+                  maxLength: 500
+                avatar:
+                  type: string
+                  format: uri
+      responses:
+        '200':
+          description: Profile updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /users/{userId}:
+    get:
+      tags:
+        - User Profile
+      summary: Get user profile by ID
+      operationId: getUserById
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: User profile retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /content/movies:
+    get:
+      tags:
+        - Content
+      summary: Get all movies
+      operationId: getMovies
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+          description: Search by title or director
+        - name: year
+          in: query
+          schema:
+            type: integer
+          description: Filter by year
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [movie, tv]
+          description: Filter by type
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+      responses:
+        '200':
+          description: Movies list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    description: Array of Movie objects
+                    items:
+                      $ref: '#/components/schemas/Movie'
+                  total:
+                    type: integer
+                    description: Total number of movies matching the query
+                  limit:
+                    type: integer
+                    description: Maximum items returned per request
+                  offset:
+                    type: integer
+                    description: Pagination offset value
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /content/movies/{movieId}:
+    get:
+      tags:
+        - Content
+      summary: Get movie details
+      operationId: getMovieById
+      parameters:
+        - name: movieId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Movie details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Movie'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /content/albums:
+    get:
+      tags:
+        - Content
+      summary: Get all albums
+      operationId: getAlbums
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+          description: Search by title or artist
+        - name: artist
+          in: query
+          schema:
+            type: string
+          description: Filter by artist
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+      responses:
+        '200':
+          description: Albums list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    description: Array of Album objects
+                    items:
+                      $ref: '#/components/schemas/Album'
+                  total:
+                    type: integer
+                    description: Total number of albums matching the query
+                  limit:
+                    type: integer
+                    description: Maximum items returned per request
+                  offset:
+                    type: integer
+                    description: Pagination offset value
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /content/albums/{albumId}:
+    get:
+      tags:
+        - Content
+      summary: Get album details
+      operationId: getAlbumById
+      parameters:
+        - name: albumId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Album details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Album'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /content/games:
+    get:
+      tags:
+        - Content
+      summary: Get all games
+      operationId: getGames
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+          description: Search by title
+        - name: platform
+          in: query
+          schema:
+            type: string
+          description: Filter by platform
+        - name: difficulty
+          in: query
+          schema:
+            type: string
+            enum: [Easy, Medium, Hard]
+          description: Filter by difficulty
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+      responses:
+        '200':
+          description: Games list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    description: Array of Game objects
+                    items:
+                      $ref: '#/components/schemas/Game'
+                  total:
+                    type: integer
+                    description: Total number of games matching the query
+                  limit:
+                    type: integer
+                    description: Maximum items returned per request
+                  offset:
+                    type: integer
+                    description: Pagination offset value
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /content/games/{gameId}:
+    get:
+      tags:
+        - Content
+      summary: Get game details
+      operationId: getGameById
+      parameters:
+        - name: gameId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Game details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Game'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /content/books:
+    get:
+      tags:
+        - Content
+      summary: Get all books
+      operationId: getBooks
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+          description: Search by title or author
+        - name: author
+          in: query
+          schema:
+            type: string
+          description: Filter by author
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+      responses:
+        '200':
+          description: Books list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    description: Array of Book objects
+                    items:
+                      $ref: '#/components/schemas/Book'
+                  total:
+                    type: integer
+                    description: Total number of books matching the query
+                  limit:
+                    type: integer
+                    description: Maximum items returned per request
+                  offset:
+                    type: integer
+                    description: Pagination offset value
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /content/books/{bookId}:
+    get:
+      tags:
+        - Content
+      summary: Get book details
+      operationId: getBookById
+      parameters:
+        - name: bookId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Book details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Book'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /content/locations:
+    get:
+      tags:
+        - Content
+      summary: Get all travel destinations
+      operationId: getLocations
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+          description: Search by name or city
+        - name: country
+          in: query
+          schema:
+            type: string
+          description: Filter by country
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+      responses:
+        '200':
+          description: Locations list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    description: Array of Location objects
+                    items:
+                      $ref: '#/components/schemas/Location'
+                  total:
+                    type: integer
+                    description: Total number of locations matching the query
+                  limit:
+                    type: integer
+                    description: Maximum items returned per request
+                  offset:
+                    type: integer
+                    description: Pagination offset value
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /content/locations/{locationId}:
+    get:
+      tags:
+        - Content
+      summary: Get location details
+      operationId: getLocationById
+      parameters:
+        - name: locationId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Location details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Location'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /search:
+    get:
+      tags:
+        - Search
+      summary: Global search across all content
+      operationId: globalSearch
+      parameters:
+        - name: query
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Search query
+        - $ref: '#/components/parameters/Categories'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    description: Array of mixed content objects matching the search query (Movie, Album, Game, Book, or Location)
+                    items:
+                      oneOf:
+                        - $ref: '#/components/schemas/Movie'
+                        - $ref: '#/components/schemas/Album'
+                        - $ref: '#/components/schemas/Game'
+                        - $ref: '#/components/schemas/Book'
+                        - $ref: '#/components/schemas/Location'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /aura/profile:
+    get:
+      tags:
+        - Aura
+      summary: Get current user's aura profile
+      operationId: getCurrentUserAura
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Aura profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuraProfile'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+    put:
+      tags:
+        - Aura
+      summary: Update aura profile
+      operationId: updateAuraProfile
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                aestheticTags:
+                  type: array
+                  items:
+                    type: string
+                auraColors:
+                  type: array
+                  items:
+                    type: string
+                    pattern: '^#[0-9A-Fa-f]{6}$'
+      responses:
+        '200':
+          description: Aura profile updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuraProfile'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /aura/profile/{userId}:
+    get:
+      tags:
+        - Aura
+      summary: Get user's aura profile
+      operationId: getUserAura
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Aura profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuraProfile'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /aura/shares:
+    get:
+      tags:
+        - Aura
+      summary: Get current user's shares
+      operationId: getUserShares
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+      responses:
+        '200':
+          description: User shares list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    description: Array of UserShare objects
+                    items:
+                      $ref: '#/components/schemas/UserShare'
+                  total:
+                    type: integer
+                    description: Total number of shares
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+    post:
+      tags:
+        - Aura
+      summary: Create a new share
+      operationId: createShare
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - category
+                - contentId
+              properties:
+                category:
+                  type: string
+                  enum: [cinema, music, games, books, travel]
+                contentId:
+                  type: string
+                caption:
+                  type: string
+                  maxLength: 500
+      responses:
+        '201':
+          description: Share created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserShare'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /aura/matches:
+    get:
+      tags:
+        - Aura
+      summary: Get aura matches (similar users)
+      operationId: getAuraMatches
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: List of aura matches
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    description: Array of AuraMatch objects representing compatible users
+                    items:
+                      $ref: '#/components/schemas/AuraMatch'
+                  total:
+                    type: integer
+                    description: Total number of aura matches found
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /aura/compatibility/{userId}:
+    get:
+      tags:
+        - Aura
+      summary: Calculate compatibility with another user
+      operationId: calculateCompatibility
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Compatibility score
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  compatibilityScore:
+                    type: integer
+                    minimum: 0
+                    maximum: 100
+                  sharedAesthetics:
+                    type: array
+                    description: Aesthetic tags and categories shared between the two users
+                    items:
+                      type: string
+                      example: dark academia
+                  matchReason:
+                    type: string
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /badges:
+    get:
+      tags:
+        - Badges & Gamification
+      summary: Get all available badges
+      operationId: getAllBadges
+      parameters:
+        - name: rarity
+          in: query
+          schema:
+            type: string
+            enum: [common, rare, epic, legendary]
+        - name: category
+          in: query
+          schema:
+            type: string
+            enum: [early, completionist, social, streak, special]
+      responses:
+        '200':
+          description: List of badges
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Badge'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /badges/user:
+    get:
+      tags:
+        - Badges & Gamification
+      summary: Get current user's badges
+      operationId: getUserBadges
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: User's badges
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  badges:
+                    type: array
+                    description: Array of Badge objects earned by the user
+                    items:
+                      $ref: '#/components/schemas/Badge'
+                  unlockedCount:
+                    type: integer
+                    description: Number of badges unlocked by the user
+                  totalCount:
+                    type: integer
+                    description: Total number of badges available in the system
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /badges/user/{userId}:
+    get:
+      tags:
+        - Badges & Gamification
+      summary: Get user's badges
+      operationId: getUserBadgesById
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: User's badges
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  badges:
+                    type: array
+                    description: Array of Badge objects earned by the user
+                    items:
+                      $ref: '#/components/schemas/Badge'
+                  unlockedCount:
+                    type: integer
+                    description: Number of badges unlocked by this user
+                  totalCount:
+                    type: integer
+                    description: Total number of badges available in the system
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /curator/stats:
+    get:
+      tags:
+        - Badges & Gamification
+      summary: Get current user's curator stats
+      operationId: getCuratorStats
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Curator statistics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserStats'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /curator/stats/{userId}:
+    get:
+      tags:
+        - Badges & Gamification
+      summary: Get user's curator stats
+      operationId: getCuratorStatsByUserId
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Curator statistics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserStats'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /curator/levels:
+    get:
+      tags:
+        - Badges & Gamification
+      summary: Get all curator levels
+      operationId: getCuratorLevels
+      responses:
+        '200':
+          description: List of curator levels
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CuratorLevel'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /social/posts:
+    get:
+      tags:
+        - Social
+      summary: Get community posts
+      operationId: getCommunityPosts
+      parameters:
+        - name: category
+          in: query
+          schema:
+            type: string
+            enum: [cinema, music, games, books, travel]
+        - name: sortBy
+          in: query
+          schema:
+            type: string
+            enum: [recent, trending, liked]
+            default: recent
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+      responses:
+        '200':
+          description: Community posts
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    description: Array of MoodboardPost objects
+                    items:
+                      $ref: '#/components/schemas/MoodboardPost'
+                  total:
+                    type: integer
+                    description: Total number of community posts
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+    post:
+      tags:
+        - Social
+      summary: Create a community post
+      operationId: createCommunityPost
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - category
+                - title
+                - image
+              properties:
+                category:
+                  type: string
+                  enum: [cinema, music, games, books, travel]
+                title:
+                  type: string
+                image:
+                  type: string
+                  format: uri
+                dominantColor:
+                  type: string
+                  pattern: '^#[0-9A-Fa-f]{6}$'
+      responses:
+        '201':
+          description: Post created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MoodboardPost'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /social/posts/{postId}:
+    get:
+      tags:
+        - Social
+      summary: Get post details
+      operationId: getPostById
+      parameters:
+        - name: postId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Post details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MoodboardPost'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags:
+        - Social
+      summary: Delete a post
+      operationId: deletePost
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: postId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Post deleted
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          description: Forbidden - not post owner
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /social/posts/{postId}/like:
+    post:
+      tags:
+        - Social
+      summary: Like a post
+      operationId: likePost
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: postId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Post liked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MoodboardPost'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags:
+        - Social
+      summary: Unlike a post
+      operationId: unlikePost
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: postId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Post unliked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MoodboardPost'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /social/posts/{postId}/comments:
+    get:
+      tags:
+        - Social
+      summary: Get post comments
+      operationId: getPostComments
+      parameters:
+        - name: postId
+          in: path
+          required: true
+          schema:
+            type: string
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Post comments
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    description: Array of Comment objects
+                    items:
+                      $ref: '#/components/schemas/Comment'
+                  total:
+                    type: integer
+                    description: Total number of comments on this post
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    post:
+      tags:
+        - Social
+      summary: Add a comment to a post
+      operationId: addComment
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: postId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - text
+              properties:
+                text:
+                  type: string
+                  maxLength: 500
+      responses:
+        '201':
+          description: Comment added
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Comment'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /social/rooms:
+    get:
+      tags:
+        - Social
+      summary: Get aesthetic rooms
+      operationId: getAestheticRooms
+      parameters:
+        - name: trending
+          in: query
+          schema:
+            type: boolean
+          description: Get only trending rooms
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+      responses:
+        '200':
+          description: Aesthetic rooms list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    description: Array of AestheticRoom objects
+                    items:
+                      $ref: '#/components/schemas/AestheticRoom'
+                  total:
+                    type: integer
+                    description: Total number of aesthetic rooms
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /social/rooms/{roomId}:
+    get:
+      tags:
+        - Social
+      summary: Get room details
+      operationId: getRoomById
+      parameters:
+        - name: roomId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Room details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AestheticRoom'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /social/rooms/{roomId}/posts:
+    get:
+      tags:
+        - Social
+      summary: Get posts in a room
+      operationId: getRoomPosts
+      parameters:
+        - name: roomId
+          in: path
+          required: true
+          schema:
+            type: string
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+      responses:
+        '200':
+          description: Room posts
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    description: Array of MoodboardPost objects in this room
+                    items:
+                      $ref: '#/components/schemas/MoodboardPost'
+                  total:
+                    type: integer
+                    description: Total number of posts in this room
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /social/rooms/{roomId}/join:
+    post:
+      tags:
+        - Social
+      summary: Join an aesthetic room
+      operationId: joinRoom
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: roomId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Joined room
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AestheticRoom'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /social/rooms/{roomId}/leave:
+    post:
+      tags:
+        - Social
+      summary: Leave an aesthetic room
+      operationId: leaveRoom
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: roomId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Left room
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /discovery/feed:
+    get:
+      tags:
+        - Social
+      summary: Get discovery feed
+      operationId: getDiscoveryFeed
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Discovery feed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    description: Array of mixed content (MoodboardPost or UserShare objects) personalized for the user
+                    items:
+                      oneOf:
+                        - $ref: '#/components/schemas/MoodboardPost'
+                        - $ref: '#/components/schemas/UserShare'
+                  total:
+                    type: integer
+                    description: Total number of items in the discovery feed
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+components:
+  schemas:
+    User:
+      type: object
+      required:
+        - userId
+        - email
+        - username
+      properties:
+        userId:
+          type: string
+        email:
+          type: string
+          format: email
+        username:
+          type: string
+        avatar:
+          type: string
+          format: uri
+        bio:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    Movie:
+      type: object
+      required:
+        - id
+        - title
+        - year
+        - director
+        - type
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        year:
+          type: integer
+        director:
+          type: string
+        poster:
+          type: string
+          format: uri
+        season:
+          type: integer
+        episode:
+          type: integer
+        type:
+          type: string
+          enum: [movie, tv]
+        url:
+          type: string
+          format: uri
+
+    Album:
+      type: object
+      required:
+        - id
+        - title
+        - artist
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        artist:
+          type: string
+        cover:
+          type: string
+          format: uri
+        duration:
+          type: integer
+          description: Duration in seconds
+        url:
+          type: string
+          format: uri
+
+    Game:
+      type: object
+      required:
+        - id
+        - title
+        - platform
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        platform:
+          type: string
+        cover:
+          type: string
+          format: uri
+        difficulty:
+          type: string
+          enum: [Easy, Medium, Hard]
+        url:
+          type: string
+          format: uri
+
+    Book:
+      type: object
+      required:
+        - id
+        - title
+        - author
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        author:
+          type: string
+        cover:
+          type: string
+          format: uri
+        totalPages:
+          type: integer
+        url:
+          type: string
+          format: uri
+
+    Location:
+      type: object
+      required:
+        - id
+        - name
+        - city
+        - country
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        city:
+          type: string
+        country:
+          type: string
+        image:
+          type: string
+          format: uri
+        weather:
+          type: string
+        temperature:
+          type: number
+          format: float
+        timezone:
+          type: string
+        url:
+          type: string
+          format: uri
+
+    UserShare:
+      type: object
+      required:
+        - id
+        - category
+        - title
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        category:
+          type: string
+          enum: [cinema, music, games, books, travel]
+        title:
+          type: string
+        image:
+          type: string
+          format: uri
+        dominantColor:
+          type: string
+          pattern: '^#[0-9A-Fa-f]{6}$'
+        caption:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+
+    AuraProfile:
+      type: object
+      required:
+        - userId
+        - username
+      properties:
+        userId:
+          type: string
+        username:
+          type: string
+        avatar:
+          type: string
+          format: uri
+        bio:
+          type: string
+        recentShares:
+          type: array
+          description: User's recent content shares across all categories
+          items:
+            $ref: '#/components/schemas/UserShare'
+        auraColors:
+          type: array
+          description: "Array of hex color codes (format: #RRGGBB) representing user's aesthetic aura"
+          items:
+            type: string
+            pattern: '^#[0-9A-Fa-f]{6}$'
+            example: '#FF6B9D'
+        aestheticTags:
+          type: array
+          description: Array of aesthetic style tags (e.g., minimalist, vintage, dark academia)
+          items:
+            type: string
+            example: minimalist
+        topCategories:
+          type: array
+          description: User's content distribution across categories with percentage breakdown
+          items:
+            type: object
+            properties:
+              category:
+                type: string
+                description: Content category (cinema, music, games, books, travel)
+              percentage:
+                type: number
+                minimum: 0
+                maximum: 100
+                description: Percentage of user's content in this category
+
+    AuraMatch:
+      type: object
+      properties:
+        user:
+          $ref: '#/components/schemas/AuraProfile'
+        similarityScore:
+          type: integer
+          minimum: 0
+          maximum: 100
+        sharedAesthetics:
+          type: array
+          description: Array of aesthetic tags shared between matched users
+          items:
+            type: string
+            example: vintage
+        matchReason:
+          type: string
+
+    Badge:
+      type: object
+      required:
+        - id
+        - name
+        - rarity
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        icon:
+          type: string
+        rarity:
+          type: string
+          enum: [common, rare, epic, legendary]
+        category:
+          type: string
+          enum: [early, completionist, social, streak, special]
+        unlocked:
+          type: boolean
+        unlockedDate:
+          type: string
+          format: date-time
+        progress:
+          type: integer
+        maxProgress:
+          type: integer
+
+    CuratorLevel:
+      type: object
+      required:
+        - level
+        - name
+        - xpRequired
+      properties:
+        level:
+          type: integer
+        name:
+          type: string
+        xpRequired:
+          type: integer
+        rewards:
+          type: array
+          description: Array of rewards granted when reaching this curator level
+          items:
+            type: string
+            example: "Unlock dark theme"
+        color:
+          type: string
+          pattern: '^#[0-9A-Fa-f]{6}$'
+
+    UserStats:
+      type: object
+      required:
+        - totalShares
+        - totalXP
+        - currentLevel
+      properties:
+        totalShares:
+          type: integer
+        totalXP:
+          type: integer
+        currentLevel:
+          type: integer
+        streakDays:
+          type: integer
+        badges:
+          type: array
+          description: Array of earned and available badges for the user
+          items:
+            $ref: '#/components/schemas/Badge'
+        completedFilmographies:
+          type: array
+          description: Array of director/artist names whose full filmographies have been viewed
+          items:
+            type: string
+            example: Greta Gerwig
+        finishedBooks:
+          type: integer
+        earlyDiscoveries:
+          type: integer
+
+    MoodboardPost:
+      type: object
+      required:
+        - id
+        - userId
+        - username
+        - category
+        - title
+        - image
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        username:
+          type: string
+        userAvatar:
+          type: string
+          format: uri
+        category:
+          type: string
+          enum: [cinema, music, games, books, travel]
+        title:
+          type: string
+        image:
+          type: string
+          format: uri
+        dominantColor:
+          type: string
+          pattern: '^#[0-9A-Fa-f]{6}$'
+        timestamp:
+          type: string
+          format: date-time
+        likes:
+          type: integer
+        comments:
+          type: integer
+
+    AestheticRoom:
+      type: object
+      required:
+        - id
+        - name
+        - hashtag
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        hashtag:
+          type: string
+        description:
+          type: string
+        coverGradient:
+          type: string
+        memberCount:
+          type: integer
+        postCount:
+          type: integer
+        trending:
+          type: boolean
+        posts:
+          type: array
+          description: Array of moodboard posts in this aesthetic room
+          items:
+            $ref: '#/components/schemas/MoodboardPost'
+        moderators:
+          type: array
+          description: Array of user IDs who moderate this room
+          items:
+            type: string
+            description: User ID of a moderator
+            example: u_moderator_123
+
+    Comment:
+      type: object
+      required:
+        - id
+        - userId
+        - username
+        - text
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        username:
+          type: string
+        userAvatar:
+          type: string
+          format: uri
+        text:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        likes:
+          type: integer
+
+  parameters:
+    Limit:
+      name: limit
+      in: query
+      description: Maximum number of items to return
+      schema:
+        type: integer
+        default: 20
+    Offset:
+      name: offset
+      in: query
+      description: Pagination offset
+      schema:
+        type: integer
+        default: 0
+    Categories:
+      name: categories
+      in: query
+      description: "Filter by categories (CSV list: cinema,music,games,books,travel)"
+      style: form
+      explode: false
+      schema:
+        type: array
+        description: Array of category filters to apply
+        items:
+          type: string
+          enum: [cinema, music, games, books, travel]
+          description: Content category name
+
+  responses:
+    BadRequest:
+      description: Bad request - invalid parameters
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              message:
+                type: string
+
+    UnauthorizedError:
+      description: Authentication required
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              message:
+                type: string
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              message:
+                type: string
+
+    ServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              message:
+                type: string
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
