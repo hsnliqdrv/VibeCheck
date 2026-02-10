@@ -7,9 +7,18 @@ function App() {
   return (
     <Router>
       <div className="app">
-        <nav style={{ padding: "1rem", borderBottom: "1px solid #ccc" }}>
-          <Link to="/" style={{ marginRight: "1rem" }}>Login</Link>
-          <Link to="/register">Register</Link>
+        <nav className="app-nav">
+          <div className="brand">
+            <span className="brand-mark">VC</span>
+            <div>
+              <p className="brand-name">VibeCheck</p>
+              <p className="brand-tag">Aesthetic Social Companion</p>
+            </div>
+          </div>
+          <div className="nav-links">
+            <Link to="/">Login</Link>
+            <Link to="/register">Register</Link>
+          </div>
         </nav>
 
         <Routes>
