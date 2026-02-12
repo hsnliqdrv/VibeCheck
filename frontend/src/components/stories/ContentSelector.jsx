@@ -58,7 +58,7 @@ export default function ContentSelector({ category, selected, onSelect }) {
     setRevealed(false);
     setError(null);
     setItems([]);
-    const params = { limit: 20 };
+    const params = { limit: 5 };
     if (searchQuery) params.search = searchQuery;
     getContentByCategory(cat, params)
       .then((res) => {
