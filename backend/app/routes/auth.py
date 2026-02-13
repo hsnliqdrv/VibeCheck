@@ -2,10 +2,31 @@ from flask import Blueprint, request, jsonify
 from flask_jwt_extended import create_access_token
 from sqlalchemy.exc import IntegrityError
 from email_validator import validate_email, EmailNotValidError
+import re
 from app.database import get_db
 from app.models.user import User
 
 auth_bp = Blueprint('auth', __name__)
+
+
+def validate_password_strength(password):
+    """
+    Validate password strength.
+    Requirements:
+    - At least 8 characters
+    - Contains at least one uppercase letter
+    - Contains at least one lowercase letter
+    - Contains at least one digit
+    """
+    if len(password) < 8:
+        return False, "Password must be at least 8 characters long"
+    if not re.search(r'[A-Z]', password):
+        return False, "Password must contain at least one uppercase letter"
+    if not re.search(r'[a-z]', password):
+        return False, "Password must contain at least one lowercase letter"
+    if not re.search(r'\d', password):
+        return False, "Password must contain at least one digit"
+    return True, "Password is strong"
 
 
 @auth_bp.route('/login', methods=['POST'])
@@ -271,6 +292,14 @@ def register():
             return jsonify({
                 'error': 'Bad Request',
                 'message': 'Username must be between 3 and 20 characters'
+            }), 400
+        
+        # Validate password strength
+        is_valid, message = validate_password_strength(password)
+        if not is_valid:
+            return jsonify({
+                'error': 'Bad Request',
+                'message': message
             }), 400
         
         # Get database session
