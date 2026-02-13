@@ -4,3 +4,4 @@ __pycache__
 .venv
 package-lock.json
 dist
+**/.DS_Store

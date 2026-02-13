@@ -64,7 +64,11 @@ def create_app():
     # Register blueprints
     from app.routes.auth import auth_bp
     from app.routes.content import content_bp
+    from app.routes.user_profile import user_profile_bp
+    from app.routes.aura import aura_bp
     app.register_blueprint(auth_bp, url_prefix='/api/v1/auth')
     app.register_blueprint(content_bp, url_prefix='/api/v1/content')
+    app.register_blueprint(user_profile_bp, url_prefix='/api/v1/users')
+    app.register_blueprint(aura_bp, url_prefix='/api/v1/aura')
     
     return app
