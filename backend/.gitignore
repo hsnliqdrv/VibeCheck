@@ -16,3 +16,11 @@ ENV/
 *.swo
 *~
 .DS_Store
+
+# Test artifacts
+test_report.html
+test_results.json
+.pytest_cache/
+htmlcov/
+.coverage
+*.log

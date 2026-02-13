@@ -210,3 +210,33 @@ docker-compose down -v
 # Access PostgreSQL shell
 docker-compose exec postgres psql -U postgres -d vibecheck
 ```
+
+## Testing
+
+Comprehensive API tests are available in the `tests/` folder.
+
+### Quick Start
+
+```powershell
+# Install test dependencies
+pip install -r tests/test_requirements.txt
+
+# Run quick smoke test
+python tests/smoke_test.py
+
+# Run full test suite
+python tests/test_api.py
+
+# Run with pytest
+pytest tests/ -v
+```
+
+### Test Documentation
+
+- **[tests/TESTING_QUICKREF.md](tests/TESTING_QUICKREF.md)** - Quick reference
+- **[tests/TEST_README.md](tests/TEST_README.md)** - Complete guide
+- **[README_TESTS.md](README_TESTS.md)** - Testing overview
+
+See the [testing documentation](README_TESTS.md) for more details.
+
+```

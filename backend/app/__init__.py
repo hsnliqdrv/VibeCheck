@@ -17,19 +17,19 @@ def create_app():
     CORS(app)
     jwt.init_app(app)
     
-    # JWT error handlers
-    @jwt.invalid_token_loader
-    def invalid_token_callback(error_string):
+    # JWT error handlers - ensure proper 401 responses
+    @jwt.unauthorized_loader
+    def missing_token_callback(error):
         return jsonify({
             'error': 'Unauthorized',
-            'message': 'Invalid token'
+            'message': 'Missing or invalid authentication token'
         }), 401
     
-    @jwt.unauthorized_loader
-    def unauthorized_callback(error_string):
+    @jwt.invalid_token_loader
+    def invalid_token_callback(error):
         return jsonify({
             'error': 'Unauthorized',
-            'message': 'Missing Authorization Header'
+            'message': 'Invalid authentication token'
         }), 401
     
     @jwt.expired_token_loader
