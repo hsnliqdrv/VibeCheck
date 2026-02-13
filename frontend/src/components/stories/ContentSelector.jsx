@@ -5,7 +5,10 @@ export default function ContentSelector({ onSelect, category }) {
   const [query, setQuery] = useState("");
 
   const handleTriggerSearch = () => {
-    console.log("Searching for:", query);
+    if (query.trim()) {
+      onSelect(query); 
+      console.log("Searching for:", query);
+    }
   };
 
   return (
@@ -16,7 +19,8 @@ export default function ContentSelector({ onSelect, category }) {
           placeholder={`Search ${category}...`}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-        />
+        /> 
+        
         <button type="button" onClick={handleTriggerSearch} className="search-btn">
           <Search size={18} />
           <span>Search</span>
