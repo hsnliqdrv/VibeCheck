@@ -27,8 +27,8 @@ fi
 echo -e "${GREEN}✓ Docker is running${NC}"
 echo ""
 
-# Navigate to backend directory
-cd "$(dirname "$0")/backend"
+# Navigate to backend directory (script is in backend/tests, so go up one level)
+cd "$(dirname "$0")/.."
 
 # Check if containers are already running
 if docker compose ps | grep -q "Up"; then
@@ -109,34 +109,34 @@ case $CHOICE in
     1)
         echo ""
         echo "Running smoke test..."
-        $PYTHON_CMD tests/smoke_test.py
+        $PYTHON_CMD backend/tests/smoke_test.py
         ;;
     2)
         echo ""
         echo "Running full test suite..."
-        $PYTHON_CMD tests/test_api.py
+        $PYTHON_CMD backend/tests/test_api.py
         ;;
     3)
         echo ""
         echo "Running pytest with HTML report..."
-        $PYTHON_CMD -m pytest tests/test_api.py -v --html=test_report.html --self-contained-html
+        $PYTHON_CMD -m pytest backend/tests/test_api.py -v --html=backend/tests/test_report.html --self-contained-html
         echo ""
-        echo -e "${GREEN}✓ Report saved to: test_report.html${NC}"
+        echo -e "${GREEN}✓ Report saved to: backend/tests/test_report.html${NC}"
         ;;
     4)
         echo ""
         echo "=== 1. Smoke Test ==="
-        $PYTHON_CMD tests/smoke_test.py
+        $PYTHON_CMD backend/tests/smoke_test.py
         
         echo ""
         echo "=== 2. Full Test Suite ==="
-        $PYTHON_CMD tests/test_api.py
+        $PYTHON_CMD backend/tests/test_api.py
         
         echo ""
         echo "=== 3. Pytest with HTML Report ==="
-        $PYTHON_CMD -m pytest tests/test_api.py -v --html=test_report.html --self-contained-html
+        $PYTHON_CMD -m pytest backend/tests/test_api.py -v --html=backend/tests/test_report.html --self-contained-html
         echo ""
-        echo -e "${GREEN}✓ Report saved to: test_report.html${NC}"
+        echo -e "${GREEN}✓ Report saved to: backend/tests/test_report.html${NC}"
         ;;
     *)
         echo -e "${RED}Invalid choice${NC}"
