@@ -4,6 +4,7 @@ from sqlalchemy import func
 from app.database import get_db
 from app.models.user import User
 from app.models.share import Share
+from typing import cast
 
 aura_bp = Blueprint('aura', __name__)
 
@@ -71,12 +72,12 @@ def get_current_user_aura():
             func.count(Share.id).label('count')
         ).filter_by(user_id=current_user_id).group_by(Share.category).all()
         
-        total_shares = sum(c.count for c in category_counts)
+        total_shares: int = sum([cast(int, c.count) for c in category_counts], 0)
         top_categories = []
         
         if total_shares > 0:
             for cat in category_counts:
-                percentage = round((cat.count / total_shares) * 100, 1)
+                percentage = round((cast(int, cat.count) / total_shares) * 100, 1)
                 top_categories.append({
                     'category': cat.category,
                     'percentage': percentage
@@ -205,12 +206,12 @@ def update_aura_profile():
             func.count(Share.id).label('count')
         ).filter_by(user_id=current_user_id).group_by(Share.category).all()
         
-        total_shares = sum(c.count for c in category_counts)
+        total_shares: int = sum([cast(int, c.count) for c in category_counts], 0)
         top_categories = []
         
         if total_shares > 0:
             for cat in category_counts:
-                percentage = round((cat.count / total_shares) * 100, 1)
+                percentage = round((cast(int, cat.count) / total_shares) * 100, 1)
                 top_categories.append({
                     'category': cat.category,
                     'percentage': percentage
@@ -281,12 +282,12 @@ def get_user_aura(user_id):
             func.count(Share.id).label('count')
         ).filter_by(user_id=user_id).group_by(Share.category).all()
         
-        total_shares = sum(c.count for c in category_counts)
+        total_shares: int = sum([cast(int, c.count) for c in category_counts], 0)
         top_categories = []
         
         if total_shares > 0:
             for cat in category_counts:
-                percentage = round((cat.count / total_shares) * 100, 1)
+                percentage = round((cast(int, cat.count) / total_shares) * 100, 1)
                 top_categories.append({
                     'category': cat.category,
                     'percentage': percentage
