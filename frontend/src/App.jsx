@@ -20,50 +20,43 @@ function App() {
     setIsAuthenticated(false);
   };
 
-  const handleAuthSuccess = () => {
-    setIsAuthenticated(true);
-  };
+  const handleAuthSuccess = () => setIsAuthenticated(true);
 
   return (
     <Router>
-      <div className="app">
+      <div className="app-wrapper">
         <nav className="app-nav">
-          <div className="brand">
-            <span className="brand-mark">VC</span>
-            <div>
-              <p className="brand-name">VibeCheck</p>
-              <p className="brand-tag">Aesthetic Social Companion</p>
+          <div className="nav-container">
+            <div className="brand">
+              <span className="brand-mark">VC</span>
+              <div className="brand-info">
+                <p className="brand-name">VibeCheck</p>
+                <p className="brand-tag">Aesthetic Social Companion</p>
+              </div>
             </div>
-          </div>
-          <div className="nav-links">
-            {!isAuthenticated ? (
-              <>
-                <Link to="/">Login</Link>
-                <Link to="/register">Register</Link>
-              </>
-            ) : (
-              <>
-                <Link to="/stories">Stories</Link>
-                <button onClick={handleLogout} className="logout-btn">Logout</button>
-              </>
-            )}
+            <div className="nav-links">
+              {!isAuthenticated ? (
+                <>
+                  <Link to="/" className="nav-item">Login</Link>
+                  <Link to="/register" className="nav-item">Register</Link>
+                </>
+              ) : (
+                <>
+                  <Link to="/stories" className="nav-item">Stories</Link>
+                  <button onClick={handleLogout} className="logout-btn">Logout</button>
+                </>
+              )}
+            </div>
           </div>
         </nav>
 
-        <Routes>
-          <Route 
-            path="/" 
-            element={isAuthenticated ? <Navigate to="/stories" /> : <Login onLoginSuccess={handleAuthSuccess} />} 
-          />
-          <Route 
-            path="/register" 
-            element={isAuthenticated ? <Navigate to="/stories" /> : <Register onRegisterSuccess={handleAuthSuccess} />} 
-          />
-          <Route 
-            path="/stories" 
-            element={isAuthenticated ? <StoryGenerator /> : <Navigate to="/" />} 
-          />
-        </Routes>
+        <main className="main-content">
+          <Routes>
+            <Route path="/" element={isAuthenticated ? <Navigate to="/stories" /> : <Login onLoginSuccess={handleAuthSuccess} />} />
+            <Route path="/register" element={isAuthenticated ? <Navigate to="/stories" /> : <Register onRegisterSuccess={handleAuthSuccess} />} />
+            <Route path="/stories" element={isAuthenticated ? <StoryGenerator /> : <Navigate to="/" />} />
+          </Routes>
+        </main>
       </div>
     </Router>
   );
