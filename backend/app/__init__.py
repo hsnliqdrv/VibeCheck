@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, jsonify
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
 from flasgger import Swagger
@@ -16,6 +16,28 @@ def create_app():
     # Initialize extensions
     CORS(app)
     jwt.init_app(app)
+    
+    # JWT error handlers
+    @jwt.invalid_token_loader
+    def invalid_token_callback(error_string):
+        return jsonify({
+            'error': 'Unauthorized',
+            'message': 'Invalid token'
+        }), 401
+    
+    @jwt.unauthorized_loader
+    def unauthorized_callback(error_string):
+        return jsonify({
+            'error': 'Unauthorized',
+            'message': 'Missing Authorization Header'
+        }), 401
+    
+    @jwt.expired_token_loader
+    def expired_token_callback(jwt_header, jwt_data):
+        return jsonify({
+            'error': 'Unauthorized',
+            'message': 'Token has expired'
+        }), 401
     
     # Initialize Swagger - generates docs from actual implementation
     swagger_config = {
@@ -66,9 +88,11 @@ def create_app():
     from app.routes.content import content_bp
     from app.routes.user_profile import user_profile_bp
     from app.routes.aura import aura_bp
+    from app.routes.search import search_bp
     app.register_blueprint(auth_bp, url_prefix='/api/v1/auth')
     app.register_blueprint(content_bp, url_prefix='/api/v1/content')
     app.register_blueprint(user_profile_bp, url_prefix='/api/v1/users')
     app.register_blueprint(aura_bp, url_prefix='/api/v1/aura')
+    app.register_blueprint(search_bp, url_prefix='/api/v1/search')
     
     return app

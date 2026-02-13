@@ -175,24 +175,28 @@ def get_movies():
                         offset=offset
                     )
                 )
+                
+                # Save results to database
+                for movie_data in result['data']:
+                    try:
+                        save_or_update_movie(db, movie_data)
+                    except Exception as e:
+                        print(f"Error saving movie: {e}")
+                
+                db.commit()
+                
+                return jsonify({
+                    'data': result['data'],
+                    'total': result['total'],
+                    'limit': limit,
+                    'offset': offset
+                }), 200
+            except Exception as api_error:
+                # If external API fails (e.g., missing API key), fall back to database
+                print(f"External API error: {api_error}")
+                # Continue to database query below
             finally:
                 loop.close()
-            
-            # Save results to database
-            for movie_data in result['data']:
-                try:
-                    save_or_update_movie(db, movie_data)
-                except Exception as e:
-                    print(f"Error saving movie: {e}")
-            
-            db.commit()
-            
-            return jsonify({
-                'data': result['data'],
-                'total': result['total'],
-                'limit': limit,
-                'offset': offset
-            }), 200
         
         # Otherwise, query from database
         query = db.query(Movie)
@@ -248,15 +252,20 @@ def get_movie_by_id(movie_id):
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
             try:
-                movie_data = loop.run_until_complete(movies.get_movie_by_id(movie_id))
+                try:
+                    movie_data = loop.run_until_complete(movies.get_movie_by_id(movie_id))
+                    
+                    if movie_data:
+                        movie = save_or_update_movie(db, movie_data)
+                        db.commit()
+                    else:
+                        return jsonify({'error': 'Movie not found'}), 404
+                except Exception as api_error:
+                    # If external API fails, return 404
+                    print(f"External API error: {api_error}")
+                    return jsonify({'error': 'Movie not found'}), 404
             finally:
                 loop.close()
-            
-            if movie_data:
-                movie = save_or_update_movie(db, movie_data)
-                db.commit()
-            else:
-                return jsonify({'error': 'Movie not found'}), 404
         
         return jsonify(movie.to_dict()), 200
         
@@ -539,15 +548,20 @@ def get_game_by_id(game_id):
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
             try:
-                game_data = loop.run_until_complete(games.get_game_by_id(game_id))
+                try:
+                    game_data = loop.run_until_complete(games.get_game_by_id(game_id))
+                    
+                    if game_data:
+                        game = save_or_update_game(db, game_data)
+                        db.commit()
+                    else:
+                        return jsonify({'error': 'Game not found'}), 404
+                except Exception as api_error:
+                    # If external API fails, return 404
+                    print(f"External API error: {api_error}")
+                    return jsonify({'error': 'Game not found'}), 404
             finally:
                 loop.close()
-            
-            if game_data:
-                game = save_or_update_game(db, game_data)
-                db.commit()
-            else:
-                return jsonify({'error': 'Game not found'}), 404
         
         return jsonify(game.to_dict()), 200
         
@@ -828,6 +842,119 @@ def get_location_by_id(location_id):
                 return jsonify({'error': 'Location not found'}), 404
         
         return jsonify(location.to_dict()), 200
+        
+    except Exception as e:
+        return jsonify({'error': f'Internal server error: {str(e)}'}), 500
+    """
+    Global search across all content types
+    ---
+    tags:
+      - Search
+    parameters:
+      - name: query
+        in: query
+        type: string
+        required: true
+        description: Search query
+      - name: categories
+        in: query
+        type: string
+        description: 'Comma-separated list of categories: cinema,music,games,books,travel'
+      - name: limit
+        in: query
+        type: integer
+        default: 20
+        description: Maximum number of results
+    responses:
+      200:
+        description: Search results across categories
+      400:
+        description: Bad request - missing query parameter
+    """
+    try:
+        query_string = request.args.get('query', '').strip()
+        if not query_string:
+            return jsonify({'error': 'Query parameter is required'}), 400
+        
+        limit, _ = get_pagination_params()
+        categories_param = request.args.get('categories', '')
+        
+        # Parse categories
+        if categories_param:
+            categories = [c.strip() for c in categories_param.split(',')]
+        else:
+            categories = ['cinema', 'music', 'games', 'books', 'travel']
+        
+        db = get_db()
+        results = {
+            'query': query_string,
+            'results': [],
+            'total': 0
+        }
+        
+        # Search movies/TV (cinema)
+        if 'cinema' in categories:
+            movies = db.query(Movie).filter(
+                (Movie.title.ilike(f'%{query_string}%')) |
+                (Movie.director.ilike(f'%{query_string}%'))
+            ).limit(limit).all()
+            results['results'].extend([{
+                'category': 'cinema',
+                'type': 'movie',
+                **m.to_dict()
+            } for m in movies])
+        
+        # Search albums (music)
+        if 'music' in categories:
+            albums = db.query(Album).filter(
+                (Album.title.ilike(f'%{query_string}%')) |
+                (Album.artist.ilike(f'%{query_string}%'))
+            ).limit(limit).all()
+            results['results'].extend([{
+                'category': 'music',
+                'type': 'album',
+                **a.to_dict()
+            } for a in albums])
+        
+        # Search games
+        if 'games' in categories:
+            games_list = db.query(Game).filter(
+                Game.title.ilike(f'%{query_string}%')
+            ).limit(limit).all()
+            results['results'].extend([{
+                'category': 'games',
+                'type': 'game',
+                **g.to_dict()
+            } for g in games_list])
+        
+        # Search books
+        if 'books' in categories:
+            books_list = db.query(Book).filter(
+                (Book.title.ilike(f'%{query_string}%')) |
+                (Book.author.ilike(f'%{query_string}%'))
+            ).limit(limit).all()
+            results['results'].extend([{
+                'category': 'books',
+                'type': 'book',
+                **b.to_dict()
+            } for b in books_list])
+        
+        # Search locations (travel)
+        if 'travel' in categories:
+            locations_list = db.query(Location).filter(
+                (Location.name.ilike(f'%{query_string}%')) |
+                (Location.city.ilike(f'%{query_string}%')) |
+                (Location.country.ilike(f'%{query_string}%'))
+            ).limit(limit).all()
+            results['results'].extend([{
+                'category': 'travel',
+                'type': 'location',
+                **loc.to_dict()
+            } for loc in locations_list])
+        
+        results['total'] = len(results['results'])
+        
+        return jsonify(results), 200
         
     except Exception as e:
         return jsonify({'error': f'Internal server error: {str(e)}'}), 500
