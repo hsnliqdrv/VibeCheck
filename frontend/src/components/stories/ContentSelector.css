@@ -1,126 +1,116 @@
+/* Основной контейнер */
 .content-selector {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  animation: float-in 0.6s 0.1s ease both;
+  gap: 16px;
+  animation: float-in 0.6s ease-out both;
 }
 
-@keyframes float-in {
-  from {
-    opacity: 0;
-    transform: translateY(18px) scale(0.98);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
+/* Поле поиска и кнопка */
+.content-search {
+  width: 100%;
 }
 
-.content-selector__label {
+.search-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.05));
+}
+
+.search-input-wrapper input {
+  width: 100%;
+  padding: 14px 110px 14px 18px;
+  border-radius: 16px;
+  border: 1.5px solid rgba(29, 27, 34, 0.08);
+  background: rgba(255, 255, 255, 0.9);
   font-size: 0.95rem;
-  font-weight: 600;
-  color: rgba(29, 27, 34, 0.65);
-  letter-spacing: 0.02em;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.content-selector__search {
-  padding: 0.75rem 1rem;
-  border-radius: 14px;
-  border: 1px solid rgba(29, 27, 34, 0.12);
-  font-size: 0.95rem;
-  background: rgba(255, 255, 255, 0.8);
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
-}
-
-.content-selector__search:focus {
+.search-input-wrapper input:focus {
   outline: none;
-  border-color: rgba(108, 99, 255, 0.5);
-  box-shadow: 0 0 0 3px rgba(108, 99, 255, 0.12);
+  background: #ffffff;
+  border-color: #6c63ff;
+  box-shadow: 0 0 0 4px rgba(108, 99, 255, 0.1);
 }
 
+.search-btn {
+  position: absolute;
+  right: 8px;
+  padding: 8px 16px;
+  background: #6c63ff;
+  color: white;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  transition: all 0.2s ease;
+}
+
+.search-btn:hover:not(:disabled) {
+  background: #5a52e0;
+  transform: translateY(-1px);
+}
+
+.search-btn:disabled {
+  background: #a5a2d9;
+  cursor: not-allowed;
+}
+
+/* Список результатов */
 .content-selector__list {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  max-height: 400px;
+  gap: 10px;
+  max-height: 420px;
   overflow-y: auto;
-  padding-right: 4px;
+  padding: 4px 8px 4px 0;
+  scrollbar-gutter: stable;
 }
 
-.content-selector__list .content-selector__item {
-  opacity: 0;
-  transform: translateY(12px);
-}
-
-.content-selector__list--visible .content-selector__item {
-  animation: itemSlideIn 0.35s ease both;
-}
-
-.content-selector__list::-webkit-scrollbar {
-  width: 5px;
-}
-
-.content-selector__list::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.15);
-  border-radius: 10px;
-}
-
-.content-selector__status {
-  padding: 1.5rem;
-  text-align: center;
-  font-size: 0.9rem;
-  color: rgba(29, 27, 34, 0.5);
-}
-
-.content-selector__error {
-  color: #c44;
-}
-
-
+/* Элемент списка (кнопка) */
 .content-selector__item {
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 10px 14px;
-  border-radius: 14px;
+  gap: 16px;
+  padding: 12px;
+  border-radius: 16px;
   border: 2px solid transparent;
   background: rgba(255, 255, 255, 0.5);
   cursor: pointer;
-  text-align: left;
-  transition: all 0.2s ease;
-  outline: none;
-  -webkit-tap-highlight-color: transparent;
-}
-
-@keyframes itemSlideIn {
-  from {
-    opacity: 0;
-    transform: translateY(12px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  transition: all 0.25s ease;
+  animation: itemSlideIn 0.4s ease-out both;
 }
 
 .content-selector__item:hover {
-  background: rgba(255, 255, 255, 0.85);
-  border-color: rgba(108, 99, 255, 0.2);
+  background: #ffffff;
+  border-color: rgba(108, 99, 255, 0.15);
+  transform: translateX(6px);
+  box-shadow: 4px 6px 20px rgba(0, 0, 0, 0.04);
 }
 
 .content-selector__item--active {
-  background: linear-gradient(135deg, rgba(200, 100, 255, 0.2), rgba(255, 100, 180, 0.15));
-  border-color: rgba(180, 80, 255, 0.5);
-  box-shadow: 0 4px 16px rgba(160, 80, 255, 0.15);
+  background: #ffffff;
+  border-color: #6c63ff;
+  box-shadow: 0 8px 24px rgba(108, 99, 255, 0.12);
 }
 
+/* Миниатюра */
 .content-selector__thumb {
-  flex-shrink: 0;
-  width: 48px;
-  height: 48px;
-  border-radius: 10px;
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
   overflow: hidden;
-  background: rgba(0, 0, 0, 0.05);
+  background: #f0f0f5;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .content-selector__thumb img {
@@ -132,28 +122,75 @@
 .content-selector__thumb-placeholder {
   width: 100%;
   height: 100%;
-  background: linear-gradient(135deg, #ddd, #eee);
+  background: linear-gradient(135deg, #e0e0e0, #f5f5f7);
 }
 
+/* Текстовая информация */
 .content-selector__meta {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
+  text-align: left;
   min-width: 0;
 }
 
 .content-selector__title {
-  font-size: 0.92rem;
-  font-weight: 650;
+  font-weight: 700;
+  font-size: 0.95rem;
   color: #1d1b22;
+  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 220px;
-  display: block;
 }
 
 .content-selector__secondary {
-  font-size: 0.78rem;
-  color: rgba(29, 27, 34, 0.55);
+  font-size: 0.8rem;
+  color: rgba(29, 27, 34, 0.5);
+  font-weight: 500;
+}
+
+/* Скроллбар */
+.content-selector__list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.content-selector__list::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 10px;
+}
+
+.content-selector__list::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+/* Анимации */
+@keyframes itemSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(15px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes float-in {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Состояния ошибки и пустоты */
+.content-selector__status {
+  padding: 32px;
+  text-align: center;
+  color: rgba(29, 27, 34, 0.4);
+  font-style: italic;
+  font-size: 0.9rem;
 }

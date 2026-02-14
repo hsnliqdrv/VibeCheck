@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState } from "react";
 import { Clapperboard, Music, Gamepad2, BookOpen, Plane, Download, ExternalLink, Crosshair } from "lucide-react";
 import StoryCard from "./StoryCard";
 import ContentSelector from "./ContentSelector";
@@ -37,82 +37,63 @@ export default function StoryGenerator() {
     setCaption("");
     setShareResult(null);
   };
-
-  const updateStyle = (key, value) => {
-    setStyle((prev) => ({ ...prev, [key]: value }));
+  const handleSelectContent = (item) => {
+    console.log("Выбран объект для сторис:", item);
+    setSelectedContent(item);
   };
 
-  const handleShare = useCallback(async () => {
+  const handleShare = async () => {
     if (!selectedContent) return;
     setSharing(true);
-    setShareResult(null);
     try {
-      const share = await createShare({
+      await createShare({
         category,
-        contentId: selectedContent.id,
-        caption: caption.trim() || undefined,
+        content: selectedContent,
+        style,
+        caption,
       });
-      setShareResult({ type: "success", data: share });
+      setShareResult({ type: "success" });
     } catch (err) {
-      setShareResult({
-        type: "error",
-        message: err.response?.data?.message || "Failed to share",
-      });
+      setShareResult({ type: "error", message: "Failed to share story" });
     } finally {
       setSharing(false);
     }
-  }, [category, selectedContent, caption]);
+  };
 
   return (
     <div className="story-generator">
       <div className="story-generator__panel">
         <div className="story-generator__categories">
-          {CATEGORIES.map((cat) => {
-            const Icon = cat.icon;
-            return (
-              <button
-                key={cat.key}
-                type="button"
-                className={`story-generator__cat-btn ${
-                  category === cat.key ? "story-generator__cat-btn--active" : ""
-                }`}
-                onClick={() => handleCategoryChange(cat.key)}
-              >
-                <Icon size={16} />
-                <span>{cat.label}</span>
-              </button>
-            );
-          })}
+          {CATEGORIES.map((cat) => (
+            <button
+              key={cat.key}
+              className={`story-generator__cat-btn ${category === cat.key ? "active" : ""}`}
+              onClick={() => handleCategoryChange(cat.key)}
+            >
+              <cat.icon size={18} />
+              <span>{cat.label}</span>
+            </button>
+          ))}
         </div>
 
-        <ContentSelector
-          category={category}
-          selected={selectedContent}
-          onSelect={setSelectedContent}
+        <ContentSelector 
+          category={category} 
+          onSelect={handleSelectContent} 
         />
 
-        {selectedContent && (
-          <div className="story-generator__caption-wrap">
-            <label className="story-generator__caption-label">
-              Add a caption (optional)
-            </label>
-            <textarea
-              className="story-generator__caption"
-              placeholder="What's the vibe?"
-              maxLength={500}
-              value={caption}
-              onChange={(e) => setCaption(e.target.value)}
-              rows={2}
-            />
-            <span className="story-generator__char-count">
-              {caption.length}/500
-            </span>
-          </div>
-        )}
+        <div className="story-generator__caption">
+          <label>Add a caption</label>
+          <textarea
+            placeholder="What's the vibe?"
+            value={caption}
+            onChange={(e) => setCaption(e.target.value)}
+          />
+        </div>
 
-        {selectedContent && (
-          <StoryCustomizer style={style} onChange={updateStyle} />
-        )}
+        <StoryCustomizer
+          style={style}
+          onChange={(key, val) => setStyle((prev) => ({ ...prev, [key]: val }))}
+        />
       </div>
 
       <div className="story-generator__preview">
@@ -121,14 +102,12 @@ export default function StoryGenerator() {
             <StoryCard
               category={category}
               content={selectedContent}
-              dominantColor={selectedContent.dominantColor}
               caption={caption || undefined}
               customStyle={style}
             />
 
             <div className="story-generator__actions">
               <button
-                type="button"
                 className="story-generator__btn story-generator__btn--primary"
                 onClick={handleShare}
                 disabled={sharing}
@@ -136,24 +115,11 @@ export default function StoryGenerator() {
                 <Download size={18} />
                 {sharing ? "Sharing…" : "Export to Instagram Story"}
               </button>
-              <button
-                type="button"
-                className="story-generator__btn story-generator__btn--secondary"
-              >
+              <button className="story-generator__btn story-generator__btn--secondary">
                 <ExternalLink size={18} />
                 Get the Vibe
               </button>
             </div>
-
-            {shareResult && (
-              <div
-                className={`story-generator__result story-generator__result--${shareResult.type}`}
-              >
-                {shareResult.type === "success"
-                  ? "Story shared successfully!"
-                  : shareResult.message}
-              </div>
-            )}
           </>
         ) : (
           <div className="story-generator__empty">
