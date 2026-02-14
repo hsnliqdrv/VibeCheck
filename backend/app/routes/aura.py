@@ -474,6 +474,14 @@ def create_share():
         
         db = get_db()
         
+        # Verify user exists
+        user = db.query(User).filter_by(user_id=current_user_id).first()
+        if not user:
+            return jsonify({
+                'error': 'Unauthorized',
+                'message': 'User not found'
+            }), 401
+        
         # For now, we'll use the contentId as the title
         # In a real implementation, you'd fetch the actual title from the external API
         title = data.get('title', f"{data['category'].title()} - {data['contentId']}")

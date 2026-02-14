@@ -50,15 +50,17 @@ def _normalize_location(raw: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-async def _get_location_image(name: str) -> str | None:
+async def _get_location_image(name: str, country: str | None = None) -> str | None:
     """Return a location photo URL from Unsplash search API."""
     if not UNSPLASH_ACCESS_KEY:
         return None
     try:
+        # Include country in search query to differentiate between locations with same name
+        query = f"{name}, {country}" if country else name
         data = await fetch_json(
             f"{UNSPLASH_BASE_URL}/search/photos",
             params={
-                "query": f"{name} city landscape",
+                "query": f"{query} city landscape",
                 "per_page": 1,
                 "orientation": "landscape",
             },
@@ -76,6 +78,7 @@ async def _enrich_with_weather(location: dict[str, Any]) -> dict[str, Any]:
     """Fetch current weather and a photo for the location."""
     lat, lon = location.pop("_lat", None), location.pop("_lon", None)
     name = location.get("name", "")
+    country = location.get("country", "")
 
     try:
         async def _fetch_weather() -> dict | None:
@@ -96,7 +99,7 @@ async def _enrich_with_weather(location: dict[str, Any]) -> dict[str, Any]:
 
         # Fetch weather and image in parallel (both best-effort)
         results = await asyncio.gather(
-            _fetch_weather(), _get_location_image(name),
+            _fetch_weather(), _get_location_image(name, country),
             return_exceptions=True,
         )
 

@@ -171,6 +171,95 @@ class VibeCheckAPITester:
             return False
     
     # ─────────────────────────────────────────────────────────
+    # JWT VALIDATION TESTS
+    # ─────────────────────────────────────────────────────────
+    
+    def test_missing_authorization_header(self):
+        """Test endpoint without Authorization header"""
+        try:
+            response = requests.get(f"{self.base_url}/users/profile")
+            passed = response.status_code == 401
+            self._log_test("Missing Authorization header", passed, response)
+            return passed
+        except Exception as e:
+            self._log_test("Missing Authorization header", False, error=e)
+            return False
+    
+    def test_malformed_token_empty(self):
+        """Test with empty token"""
+        try:
+            headers = {"Authorization": "Bearer "}
+            response = requests.get(f"{self.base_url}/users/profile", headers=headers)
+            passed = response.status_code == 401
+            self._log_test("Malformed token (empty)", passed, response)
+            return passed
+        except Exception as e:
+            self._log_test("Malformed token (empty)", False, error=e)
+            return False
+    
+    def test_malformed_token_invalid_format(self):
+        """Test with invalid token format"""
+        try:
+            headers = {"Authorization": "Bearer not.a.valid.jwt"}
+            response = requests.get(f"{self.base_url}/users/profile", headers=headers)
+            passed = response.status_code == 401
+            self._log_test("Malformed token (invalid format)", passed, response)
+            return passed
+        except Exception as e:
+            self._log_test("Malformed token (invalid format)", False, error=e)
+            return False
+    
+    def test_malformed_token_missing_bearer(self):
+        """Test with missing Bearer prefix"""
+        try:
+            headers = {"Authorization": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9"}
+            response = requests.get(f"{self.base_url}/users/profile", headers=headers)
+            passed = response.status_code == 401
+            self._log_test("Malformed token (missing Bearer)", passed, response)
+            return passed
+        except Exception as e:
+            self._log_test("Malformed token (missing Bearer)", False, error=e)
+            return False
+    
+    def test_malformed_token_wrong_prefix(self):
+        """Test with wrong token prefix (Basic instead of Bearer)"""
+        try:
+            headers = {"Authorization": "Basic eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9"}
+            response = requests.get(f"{self.base_url}/users/profile", headers=headers)
+            passed = response.status_code == 401
+            self._log_test("Malformed token (wrong prefix)", passed, response)
+            return passed
+        except Exception as e:
+            self._log_test("Malformed token (wrong prefix)", False, error=e)
+            return False
+    
+    def test_tampered_token_payload(self):
+        """Test with tampered token payload"""
+        try:
+            # Valid JWT structure but with tampered payload
+            tampered = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0YW1wZXJlZCI6InRydWUifQ.invalid_signature"
+            headers = {"Authorization": f"Bearer {tampered}"}
+            response = requests.get(f"{self.base_url}/users/profile", headers=headers)
+            passed = response.status_code == 401
+            self._log_test("Tampered token payload", passed, response)
+            return passed
+        except Exception as e:
+            self._log_test("Tampered token payload", False, error=e)
+            return False
+    
+    def test_random_token_invalid(self):
+        """Test with random invalid token string"""
+        try:
+            headers = {"Authorization": "Bearer aKJ7hK8jDj2kDjhKJhd7Kd9jdk"}
+            response = requests.get(f"{self.base_url}/users/profile", headers=headers)
+            passed = response.status_code == 401
+            self._log_test("Random invalid token", passed, response)
+            return passed
+        except Exception as e:
+            self._log_test("Random invalid token", False, error=e)
+            return False
+    
+    # ─────────────────────────────────────────────────────────
     # USER PROFILE TESTS
     # ─────────────────────────────────────────────────────────
     
@@ -903,6 +992,18 @@ class VibeCheckAPITester:
         self.test_login_invalid()
         self.test_missing_auth_token()
         self.test_invalid_auth_token()
+        print()
+        
+        # JWT Validation tests
+        print("🔑 JWT Token Validation Tests")
+        print("-" * 70)
+        self.test_missing_authorization_header()
+        self.test_malformed_token_empty()
+        self.test_malformed_token_invalid_format()
+        self.test_malformed_token_missing_bearer()
+        self.test_malformed_token_wrong_prefix()
+        self.test_tampered_token_payload()
+        self.test_random_token_invalid()
         print()
         
         # User profile tests
