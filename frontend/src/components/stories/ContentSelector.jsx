@@ -1,102 +1,163 @@
-import { useState, useEffect } from "react";
-import { Search, Loader2, AlertCircle } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
 import { getContentByCategory } from "../../services/api";
 import "./ContentSelector.css";
+
+const CATEGORY_CONTENT_LABEL = {
+  cinema: "Movie or Show",
+  music: "Album",
+  games: "Game",
+  books: "Book",
+  travel: "Destination",
+};
+
+function getThumbnail(category, item) {
+  switch (category) {
+    case "cinema":
+      return item.poster;
+    case "music":
+    case "games":
+    case "books":
+      return item.cover;
+    case "travel":
+      return item.image;
+    default:
+      return null;
+  }
+}
+
+function getSecondary(category, item) {
+  switch (category) {
+    case "cinema":
+      return [item.director, item.year].filter(Boolean).join("  ·  ");
+    case "music":
+      return item.artist || "";
+    case "games":
+      return item.platform || "";
+    case "books":
+      return item.author || "";
+    case "travel":
+      return [item.city, item.country].filter(Boolean).join(", ");
+    default:
+      return "";
+  }
+}
 
 export default function ContentSelector({ category, selected, onSelect }) {
   const [items, setItems] = useState([]);
   const [search, setSearch] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const loadContent = async (query = "") => {
+  const [revealed, setRevealed] = useState(false);
+  const [animKey, setAnimKey] = useState(0);
+  const prevCategory = useRef(category);
+  const reqId = useRef(0);
+
+  const fetchContent = (cat, searchQuery = "") => {
+    const id = ++reqId.current;
     setLoading(true);
+    setRevealed(false);
     setError(null);
-    try {
-      const response = await getContentByCategory(category, query);
-      const data = response?.data || response;
-      
-      if (Array.isArray(data)) {
-        setItems(data);
-      } else {
-        console.error("API returned non-array data:", data);
+    setItems([]);
+    const params = { limit: 5 };
+    if (searchQuery) params.search = searchQuery;
+    getContentByCategory(cat, params)
+      .then((res) => {
+        if (id !== reqId.current) return;
+        setItems(res.data || []);
+        setLoading(false);
+        requestAnimationFrame(() => setRevealed(true));
+      })
+      .catch(() => {
+        if (id !== reqId.current) return;
         setItems([]);
-      }
-    } catch (err) {
-      console.error("Fetch error:", err);
-      setError("Check the server connection");
-    } finally {
-      setLoading(false);
-    }
+        setError("Couldn't load content. Check the server.");
+        setLoading(false);
+      });
   };
+
   useEffect(() => {
-    loadContent();
+    if (prevCategory.current !== category) {
+      prevCategory.current = category;
+      setSearch("");
+      setAnimKey((k) => k + 1);
+    }
+    fetchContent(category, "");
   }, [category]);
-  const handleSearch = (e) => {
-    e.preventDefault();
-    loadContent(search);
+
+  const handleSearch = () => {
+    fetchContent(category, search.trim());
   };
+
+  const contentLabel = CATEGORY_CONTENT_LABEL[category] || "Content";
 
   return (
     <div className="content-selector">
-      <form className="content-search" onSubmit={handleSearch}>
-        <div className="search-input-wrapper">
-          <input
-            type="text"
-            placeholder={`Search in category ${category}...`}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-          <button type="submit" className="search-btn" disabled={loading}>
-            {loading ? <Loader2 className="animate-spin" size={18} /> : <Search size={18} />}
-          </button>
-        </div>
-      </form>
+      <label className="content-selector__label">
+        Select a {contentLabel}
+      </label>
 
-      <div className="content-selector__results-container">
+      <div className="content-selector__search-row">
+        <input
+          type="text"
+          className="content-selector__search"
+          placeholder={`Search ${contentLabel.toLowerCase()}s…`}
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+        <button
+          type="button"
+          className="content-selector__search-btn"
+          onClick={handleSearch}
+        >
+          Search
+        </button>
+      </div>
+
+      <div className={`content-selector__list ${revealed ? "content-selector__list--visible" : ""}`} key={animKey}>
         {loading && (
-          <div className="content-selector__status">
-            <Loader2 className="animate-spin" /> Ищем...
-          </div>
+          <div className="content-selector__status">Loading…</div>
         )}
-
-        {error && (
-          <div className="content-selector__status content-selector__error">
-            <AlertCircle size={18} /> {error}
-          </div>
+        {!loading && error && (
+          <div className="content-selector__status content-selector__error">{error}</div>
         )}
-
         {!loading && !error && items.length === 0 && (
-          <div className="content-selector__status">Ничего не найдено</div>
+          <div className="content-selector__status">No results found</div>
         )}
+        {items.map((item, index) => {
+          const isActive = selected?.id === item.id;
+          const thumb = getThumbnail(category, item);
+          const secondary = getSecondary(category, item);
 
-        {!loading && items.length > 0 && (
-          <div className="content-selector__list content-selector__list--visible">
-            {items.map((item, index) => (
-              <button
-                key={item.id || index}
-                type="button"
-                className={`content-selector__item ${
-                  selected?.id === item.id ? "content-selector__item--active" : ""
-                }`}
-                onClick={() => onSelect(item)}
-              >
-                <div className="content-selector__thumb">
-                  {(item.poster || item.cover || item.image) ? (
-                    <img src={item.poster || item.cover || item.image} alt={item.title} />
-                  ) : (
-                    <div className="content-selector__thumb-placeholder" />
-                  )}
-                </div>
-                <div className="content-selector__meta">
-                  <span className="content-selector__title">{item.title || item.name}</span>
+          return (
+            <button
+              key={item.id}
+              type="button"
+              className={`content-selector__item ${
+                isActive ? "content-selector__item--active" : ""
+              }`}
+              style={{ animationDelay: `${index * 50}ms` }}
+              onClick={() => onSelect(item)}
+            >
+              <div className="content-selector__thumb">
+                {thumb ? (
+                  <img src={thumb} alt={item.title || item.name} />
+                ) : (
+                  <div className="content-selector__thumb-placeholder" />
+                )}
+              </div>
+              <div className="content-selector__meta">
+                <span className="content-selector__title">
+                  {item.title || item.name}
+                </span>
+                {secondary && (
                   <span className="content-selector__secondary">
-                    {item.year || item.artist || item.author || ""}
+                    {secondary}
                   </span>
-                </div>
-              </button>
-            ))}
-          </div>
-        )}
+                )}
+              </div>
+            </button>
+          );
+        })}
       </div>
     </div>
   );
