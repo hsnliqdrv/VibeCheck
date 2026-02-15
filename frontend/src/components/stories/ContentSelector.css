@@ -24,12 +24,36 @@
 }
 
 .content-selector__search {
+  flex: 1;
   padding: 0.75rem 1rem;
   border-radius: 14px;
   border: 1px solid rgba(29, 27, 34, 0.12);
   font-size: 0.95rem;
   background: rgba(255, 255, 255, 0.8);
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.content-selector__search-row {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+}
+
+.content-selector__search-btn {
+  border: none;
+  padding: 0.75rem 1.1rem;
+  border-radius: 14px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  background: #1d1b22;
+  color: #fff;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.content-selector__search-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 20px rgba(15, 14, 32, 0.2);
 }
 
 .content-selector__search:focus {

@@ -1,12 +1,14 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 export default function Register() {
   const { register, handleSubmit } = useForm();
   const [status, setStatus] = useState({ loading: false, error: "", success: "" });
+  const navigate = useNavigate();
 
   const onSubmit = async (data) => {
     setStatus({ loading: true, error: "", success: "" });
@@ -22,6 +24,8 @@ export default function Register() {
       localStorage.setItem("token", token);
       localStorage.setItem("user", JSON.stringify(user));
       setStatus({ loading: false, error: "", success: "Account created. You are signed in." });
+      window.dispatchEvent(new Event("auth-changed"));
+      navigate("/stories");
     } catch (error) {
       const message =
         error.response?.data?.message ||

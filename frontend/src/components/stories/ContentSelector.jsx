@@ -81,14 +81,12 @@ export default function ContentSelector({ category, selected, onSelect }) {
       setSearch("");
       setAnimKey((k) => k + 1);
     }
+    fetchContent(category, "");
+  }, [category]);
 
-    const delay = search ? 300 : 0;
-    const timer = setTimeout(() => {
-      fetchContent(category, search.trim());
-    }, delay);
-
-    return () => clearTimeout(timer);
-  }, [category, search]);
+  const handleSearch = () => {
+    fetchContent(category, search.trim());
+  };
 
   const contentLabel = CATEGORY_CONTENT_LABEL[category] || "Content";
 
@@ -98,13 +96,22 @@ export default function ContentSelector({ category, selected, onSelect }) {
         Select a {contentLabel}
       </label>
 
-      <input
-        type="text"
-        className="content-selector__search"
-        placeholder={`Search ${contentLabel.toLowerCase()}s…`}
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-      />
+      <div className="content-selector__search-row">
+        <input
+          type="text"
+          className="content-selector__search"
+          placeholder={`Search ${contentLabel.toLowerCase()}s…`}
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+        <button
+          type="button"
+          className="content-selector__search-btn"
+          onClick={handleSearch}
+        >
+          Search
+        </button>
+      </div>
 
       <div className={`content-selector__list ${revealed ? "content-selector__list--visible" : ""}`} key={animKey}>
         {loading && (
