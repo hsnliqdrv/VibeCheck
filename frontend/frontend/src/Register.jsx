@@ -1,20 +1,26 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
-export default function Login() {
+export default function Register() {
   const { register, handleSubmit } = useForm();
   const [status, setStatus] = useState({ loading: false, error: "", success: "" });
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (localStorage.getItem("token")) {
+      navigate("/stories");
+    }
+  }, [navigate]);
 
   const onSubmit = async (data) => {
     setStatus({ loading: true, error: "", success: "" });
 
     try {
-      const response = await axios.post(`${API_BASE_URL}/auth/login`, data);
+      const response = await axios.post(`${API_BASE_URL}/auth/register`, data);
       const { token, user } = response.data || {};
 
       if (!token || !user) {
@@ -23,7 +29,7 @@ export default function Login() {
 
       localStorage.setItem("token", token);
       localStorage.setItem("user", JSON.stringify(user));
-      setStatus({ loading: false, error: "", success: `Welcome back, ${user.username}!` });
+      setStatus({ loading: false, error: "", success: "Account created. You are signed in." });
       window.dispatchEvent(new Event("auth-changed"));
       navigate("/stories");
     } catch (error) {
@@ -31,7 +37,7 @@ export default function Login() {
         error.response?.data?.message ||
         error.response?.data?.error ||
         error.message ||
-        "Login failed.";
+        "Registration failed.";
       setStatus({ loading: false, error: message, success: "" });
     }
   };
@@ -40,12 +46,16 @@ export default function Login() {
     <div className="auth-container">
       <div className="auth-card">
         <div className="auth-header">
-          <p className="auth-eyebrow">Welcome back</p>
-          <h2>Login</h2>
-          <p className="auth-subtitle">Sign in to continue building your vibe.</p>
+          <p className="auth-eyebrow">Start your aura</p>
+          <h2>Register</h2>
+          <p className="auth-subtitle">Create a profile that feels like you.</p>
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="auth-form">
+          <label className="auth-label">
+            Username
+            <input {...register("username")} placeholder="aesthetic_anna" required />
+          </label>
           <label className="auth-label">
             Email
             <input
@@ -60,14 +70,14 @@ export default function Login() {
             <input
               {...register("password")}
               type="password"
-              placeholder="Enter your password"
+              placeholder="Create a strong password"
               required
             />
           </label>
           {status.error && <div className="auth-message error">{status.error}</div>}
           {status.success && <div className="auth-message success">{status.success}</div>}
           <button className="auth-button" type="submit" disabled={status.loading}>
-            {status.loading ? "Signing in..." : "Login"}
+            {status.loading ? "Creating..." : "Create Account"}
           </button>
         </form>
       </div>
