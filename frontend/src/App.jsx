@@ -1,12 +1,23 @@
 import { useCallback, useEffect, useState } from "react";
-import { BrowserRouter as Router, Routes, Route, Link, useNavigate } from "react-router-dom";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Link,
+  useNavigate,
+} from "react-router-dom";
+
 import Login from "./Login";
 import Register from "./Register";
 import { StoryGenerator } from "./components/stories";
+import Profile from "./Profile";
 import "./App.css";
 
 function AppShell() {
-  const [isAuthed, setIsAuthed] = useState(() => Boolean(localStorage.getItem("token")));
+  const [isAuthed, setIsAuthed] = useState(() =>
+    Boolean(localStorage.getItem("token"))
+  );
+
   const navigate = useNavigate();
 
   const syncAuthState = useCallback(() => {
@@ -15,12 +26,16 @@ function AppShell() {
 
   useEffect(() => {
     syncAuthState();
+
     const handleStorage = (event) => {
       if (event.key === "token") syncAuthState();
     };
+
     const handleAuthChanged = () => syncAuthState();
+
     window.addEventListener("storage", handleStorage);
     window.addEventListener("auth-changed", handleAuthChanged);
+
     return () => {
       window.removeEventListener("storage", handleStorage);
       window.removeEventListener("auth-changed", handleAuthChanged);
@@ -45,12 +60,18 @@ function AppShell() {
             <p className="brand-tag">Aesthetic Social Companion</p>
           </div>
         </div>
+
         <div className="nav-links">
           {!isAuthed && <Link to="/">Login</Link>}
           {!isAuthed && <Link to="/register">Register</Link>}
           <Link to="/stories">Stories</Link>
+          {isAuthed && <Link to="/profile">Profile</Link>}
           {isAuthed && (
-            <button type="button" className="nav-link-button" onClick={handleLogout}>
+            <button
+              type="button"
+              className="nav-link-button"
+              onClick={handleLogout}
+            >
               Logout
             </button>
           )}
@@ -61,6 +82,7 @@ function AppShell() {
         <Route path="/" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/stories" element={<StoryGenerator />} />
+        <Route path="/profile" element={<Profile />} />
       </Routes>
     </div>
   );
