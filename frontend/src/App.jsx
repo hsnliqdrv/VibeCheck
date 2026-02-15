@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { BrowserRouter as Router, Routes, Route, Link, useNavigate } from "react-router-dom";
 import Login from "./Login";
 import Register from "./Register";
+import Profile from "./Profile";
 import { StoryGenerator } from "./components/stories";
 import "./App.css";
 
@@ -48,7 +49,8 @@ function AppShell() {
         <div className="nav-links">
           {!isAuthed && <Link to="/">Login</Link>}
           {!isAuthed && <Link to="/register">Register</Link>}
-          <Link to="/stories">Stories</Link>
+          {isAuthed && <Link to="/stories">Stories</Link>}
+          {isAuthed && <Link to="/profile">Profile</Link>}
           {isAuthed && (
             <button type="button" className="nav-link-button" onClick={handleLogout}>
               Logout
@@ -61,6 +63,7 @@ function AppShell() {
         <Route path="/" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/stories" element={<StoryGenerator />} />
+        <Route path="/profile" element={<Profile />} />
       </Routes>
     </div>
   );

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
@@ -9,6 +9,12 @@ export default function Register() {
   const { register, handleSubmit } = useForm();
   const [status, setStatus] = useState({ loading: false, error: "", success: "" });
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (localStorage.getItem("token")) {
+      navigate("/stories");
+    }
+  }, [navigate]);
 
   const onSubmit = async (data) => {
     setStatus({ loading: true, error: "", success: "" });
