@@ -4,7 +4,7 @@ from sqlalchemy import func
 from app.database import get_db
 from app.models.user import User
 from app.models.share import Share
-from typing import cast
+from typing import cast, List, Optional
 
 aura_bp = Blueprint('aura', __name__)
 
@@ -506,6 +506,382 @@ def create_share():
     except Exception as e:
         if db is not None:
             db.rollback()
+        return jsonify({
+            'error': 'Internal Server Error',
+            'message': str(e)
+        }), 500
+
+
+# ──────────────────────────────────────────────
+# AURA MATCHING ENDPOINTS
+# ──────────────────────────────────────────────
+
+@aura_bp.route('/matches', methods=['GET'])
+@jwt_required()
+def get_aura_matches():
+    """
+    Get aura matches (similar users based on aesthetic preferences)
+    ---
+    tags:
+      - Aura
+    security:
+      - Bearer: []
+    parameters:
+      - name: limit
+        in: query
+        type: integer
+        default: 10
+        minimum: 1
+        maximum: 50
+        description: Maximum number of matches to return
+      - name: offset
+        in: query
+        type: integer
+        default: 0
+        minimum: 0
+        description: Number of results to skip for pagination
+    responses:
+      200:
+        description: List of aura matches
+        schema:
+          type: object
+          properties:
+            data:
+              type: array
+            total:
+              type: integer
+      401:
+        description: Unauthorized
+    """
+    try:
+        current_user_id = get_jwt_identity()
+        db = get_db()
+        
+        # Pagination parameters
+        limit = request.args.get('limit', 10, type=int)
+        offset = request.args.get('offset', 0, type=int)
+        
+        # Validate pagination
+        if limit < 1 or limit > 50:
+            limit = 10
+        if offset < 0:
+            offset = 0
+        
+        # Get current user
+        current_user = db.query(User).filter_by(user_id=current_user_id).first()
+        if not current_user:
+            return jsonify({
+                'error': 'Not Found',
+                'message': 'User not found'
+            }), 404
+        
+        # Get current user's shares and category distribution
+        current_shares = db.query(Share).filter_by(user_id=current_user_id).all()
+        current_category_counts = {}
+        for share in current_shares:
+            current_category_counts[share.category] = current_category_counts.get(share.category, 0) + 1
+        
+        current_total_shares = len(current_shares)
+        # Get aesthetic tags and colors (JSON columns return list or None)
+        cur_tags = cast(Optional[List[str]], current_user.aesthetic_tags)
+        cur_colors = cast(Optional[List[str]], current_user.aura_colors)
+        current_aesthetic_tags = set(cur_tags if cur_tags is not None else [])
+        current_aura_colors = set(cur_colors if cur_colors is not None else [])
+        
+        # Get all other users
+        other_users = db.query(User).filter(User.user_id != current_user_id).all()
+        
+        matches = []
+        
+        for user in other_users:
+            # Calculate similarity score
+            similarity_score = 0
+            shared_aesthetics = []
+            match_reasons = []
+            
+            # 1. Compare aesthetic tags (40% weight)
+            usr_tags = cast(Optional[List[str]], user.aesthetic_tags)
+            user_aesthetic_tags = set(usr_tags if usr_tags is not None else [])
+            if current_aesthetic_tags and user_aesthetic_tags:
+                shared_tags = current_aesthetic_tags.intersection(user_aesthetic_tags)
+                if shared_tags:
+                    tag_similarity = (len(shared_tags) / len(current_aesthetic_tags.union(user_aesthetic_tags))) * 100
+                    similarity_score += tag_similarity * 0.4
+                    shared_aesthetics.extend(list(shared_tags))
+                    if len(shared_tags) > 0:
+                        tags_str = ', '.join(list(shared_tags)[:3])
+                        match_reasons.append(f"You both vibe with {tags_str}")
+            
+            # 2. Compare aura colors (20% weight)
+            usr_colors = cast(Optional[List[str]], user.aura_colors)
+            user_aura_colors = set(usr_colors if usr_colors is not None else [])
+            if current_aura_colors and user_aura_colors:
+                shared_colors = current_aura_colors.intersection(user_aura_colors)
+                if shared_colors:
+                    color_similarity = (len(shared_colors) / len(current_aura_colors.union(user_aura_colors))) * 100
+                    similarity_score += color_similarity * 0.2
+            
+            # 3. Compare category preferences (40% weight)
+            user_shares = db.query(Share).filter_by(user_id=user.user_id).all()
+            user_category_counts = {}
+            for share in user_shares:
+                user_category_counts[share.category] = user_category_counts.get(share.category, 0) + 1
+            
+            user_total_shares = len(user_shares)
+            
+            if current_total_shares > 0 and user_total_shares > 0:
+                # Calculate category distribution similarity
+                all_categories = set(current_category_counts.keys()).union(set(user_category_counts.keys()))
+                category_similarity = 0
+                shared_categories = []
+                
+                for category in all_categories:
+                    current_pct = (current_category_counts.get(category, 0) / current_total_shares) * 100
+                    user_pct = (user_category_counts.get(category, 0) / user_total_shares) * 100
+                    
+                    # Calculate similarity for this category (inverse of difference)
+                    category_diff = abs(current_pct - user_pct)
+                    category_sim = max(0, 100 - category_diff)
+                    category_similarity += category_sim
+                    
+                    # Track shared interests
+                    if current_pct > 0 and user_pct > 0:
+                        shared_categories.append(category)
+                
+                if len(all_categories) > 0:
+                    category_similarity = category_similarity / len(all_categories)
+                    similarity_score += category_similarity * 0.4
+                    
+                    if shared_categories:
+                        shared_aesthetics.extend(shared_categories)
+                        cats_str = ', '.join(shared_categories[:3])
+                        match_reasons.append(f"You both enjoy {cats_str}")
+            
+            # Round similarity score
+            similarity_score = min(100, max(0, round(similarity_score)))
+            
+            # Only include matches with similarity > 0
+            if similarity_score > 0:
+                # Build match reason
+                match_reason = ' and '.join(match_reasons) if match_reasons else 'You both have similar aesthetic preferences'
+                
+                # Get user's recent shares for profile
+                recent_shares = db.query(Share).filter_by(
+                    user_id=user.user_id
+                ).order_by(Share.created_at.desc()).limit(10).all()
+                
+                # Calculate top categories for matched user
+                category_counts_for_match = db.query(
+                    Share.category,
+                    func.count(Share.id).label('count')
+                ).filter_by(user_id=user.user_id).group_by(Share.category).all()
+                
+                total_shares_for_match = sum([cast(int, c.count) for c in category_counts_for_match], 0)
+                top_categories_match = []
+                
+                if total_shares_for_match > 0:
+                    for cat in category_counts_for_match:
+                        percentage = round((cast(int, cat.count) / total_shares_for_match) * 100, 1)
+                        top_categories_match.append({
+                            'category': cat.category,
+                            'percentage': percentage
+                        })
+                    top_categories_match.sort(key=lambda x: x['percentage'], reverse=True)
+                
+                matches.append({
+                    'user': {
+                        'userId': user.user_id,
+                        'username': user.username,
+                        'avatar': user.avatar,
+                        'bio': user.bio,
+                        'recentShares': [share.to_dict() for share in recent_shares],
+                        'auraColors': user.aura_colors or [],
+                        'aestheticTags': user.aesthetic_tags or [],
+                        'topCategories': top_categories_match
+                    },
+                    'similarityScore': similarity_score,
+                    'sharedAesthetics': list(set(shared_aesthetics)),
+                    'matchReason': match_reason
+                })
+        
+        # Sort by similarity score descending
+        matches.sort(key=lambda x: x['similarityScore'], reverse=True)
+        
+        # Paginate
+        total = len(matches)
+        paginated_matches = matches[offset:offset + limit]
+        
+        return jsonify({
+            'data': paginated_matches,
+            'total': total
+        }), 200
+    
+    except Exception as e:
+        return jsonify({
+            'error': 'Internal Server Error',
+            'message': str(e)
+        }), 500
+
+
+@aura_bp.route('/compatibility/<string:user_id>', methods=['GET'])
+@jwt_required()
+def calculate_compatibility(user_id):
+    """
+    Calculate compatibility with another user
+    ---
+    tags:
+      - Aura
+    security:
+      - Bearer: []
+    parameters:
+      - name: user_id
+        in: path
+        type: string
+        required: true
+        description: Target user ID to calculate compatibility with
+    responses:
+      200:
+        description: Compatibility score calculated
+        schema:
+          type: object
+          properties:
+            compatibilityScore:
+              type: integer
+              minimum: 0
+              maximum: 100
+            sharedAesthetics:
+              type: array
+              items:
+                type: string
+            matchReason:
+              type: string
+      401:
+        description: Unauthorized
+      404:
+        description: Target user not found
+    """
+    try:
+        current_user_id = get_jwt_identity()
+        db = get_db()
+        
+        # Cannot calculate compatibility with self
+        if current_user_id == user_id:
+            return jsonify({
+                'error': 'Bad Request',
+                'message': 'Cannot calculate compatibility with yourself'
+            }), 400
+        
+        # Get current user
+        current_user = db.query(User).filter_by(user_id=current_user_id).first()
+        if not current_user:
+            return jsonify({
+                'error': 'Unauthorized',
+                'message': 'Current user not found'
+            }), 401
+        
+        # Get target user
+        target_user = db.query(User).filter_by(user_id=user_id).first()
+        if not target_user:
+            return jsonify({
+                'error': 'Not Found',
+                'message': 'Target user not found'
+            }), 404
+        
+        # Get current user's data
+        current_shares = db.query(Share).filter_by(user_id=current_user_id).all()
+        current_category_counts = {}
+        for share in current_shares:
+            current_category_counts[share.category] = current_category_counts.get(share.category, 0) + 1
+        
+        current_total_shares = len(current_shares)
+        # Get aesthetic tags and colors (JSON columns return list or None)
+        cur_tags = cast(Optional[List[str]], current_user.aesthetic_tags)
+        cur_colors = cast(Optional[List[str]], current_user.aura_colors)
+        current_aesthetic_tags = set(cur_tags if cur_tags is not None else [])
+        current_aura_colors = set(cur_colors if cur_colors is not None else [])
+        
+        # Get target user's data
+        target_shares = db.query(Share).filter_by(user_id=user_id).all()
+        target_category_counts = {}
+        for share in target_shares:
+            target_category_counts[share.category] = target_category_counts.get(share.category, 0) + 1
+        
+        target_total_shares = len(target_shares)
+        # Get target user aesthetic tags and colors (JSON columns return list or None)
+        tgt_tags = cast(Optional[List[str]], target_user.aesthetic_tags)
+        tgt_colors = cast(Optional[List[str]], target_user.aura_colors)
+        target_aesthetic_tags = set(tgt_tags if tgt_tags is not None else [])
+        target_aura_colors = set(tgt_colors if tgt_colors is not None else [])
+        
+        # Calculate compatibility score
+        compatibility_score = 0
+        shared_aesthetics = []
+        match_reasons = []
+        
+        # 1. Aesthetic tags comparison (40% weight)
+        if current_aesthetic_tags and target_aesthetic_tags:
+            shared_tags = current_aesthetic_tags.intersection(target_aesthetic_tags)
+            if shared_tags:
+                tag_similarity = (len(shared_tags) / len(current_aesthetic_tags.union(target_aesthetic_tags))) * 100
+                compatibility_score += tag_similarity * 0.4
+                shared_aesthetics.extend(list(shared_tags))
+                tags_str = ', '.join(list(shared_tags))
+                match_reasons.append(f"You both vibe with {tags_str}")
+        
+        # 2. Aura colors comparison (20% weight)
+        if current_aura_colors and target_aura_colors:
+            shared_colors = current_aura_colors.intersection(target_aura_colors)
+            if shared_colors:
+                color_similarity = (len(shared_colors) / len(current_aura_colors.union(target_aura_colors))) * 100
+                compatibility_score += color_similarity * 0.2
+                color_count = len(shared_colors)
+                plural = 'color' if color_count == 1 else 'colors'
+                match_reasons.append(f"You both share {color_count} aura {plural}")
+        
+        # 3. Category preferences comparison (40% weight)
+        if current_total_shares > 0 and target_total_shares > 0:
+            all_categories = set(current_category_counts.keys()).union(set(target_category_counts.keys()))
+            category_similarity = 0
+            shared_categories = []
+            
+            for category in all_categories:
+                current_pct = (current_category_counts.get(category, 0) / current_total_shares) * 100
+                target_pct = (target_category_counts.get(category, 0) / target_total_shares) * 100
+                
+                # Calculate similarity for this category
+                category_diff = abs(current_pct - target_pct)
+                category_sim = max(0, 100 - category_diff)
+                category_similarity += category_sim
+                
+                # Track shared interests
+                if current_pct > 0 and target_pct > 0:
+                    shared_categories.append(category)
+            
+            if len(all_categories) > 0:
+                category_similarity = category_similarity / len(all_categories)
+                compatibility_score += category_similarity * 0.4
+                
+                if shared_categories:
+                    shared_aesthetics.extend(shared_categories)
+                    cats_str = ', '.join(shared_categories)
+                    match_reasons.append(f"You both love {cats_str}")
+        
+        # Round and cap compatibility score
+        compatibility_score = min(100, max(0, round(compatibility_score)))
+        
+        # Build match reason
+        if not match_reasons:
+            match_reason = "You both have limited shared preferences - explore more content to discover common ground"
+        else:
+            match_reason = ". ".join(match_reasons)
+        
+        return jsonify({
+            'compatibilityScore': compatibility_score,
+            'sharedAesthetics': list(set(shared_aesthetics)),
+            'matchReason': match_reason
+        }), 200
+    
+    except Exception as e:
         return jsonify({
             'error': 'Internal Server Error',
             'message': str(e)

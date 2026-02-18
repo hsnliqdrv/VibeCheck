@@ -646,6 +646,125 @@ class VibeCheckAPITester:
             self._log_test("GET /aura/profile/{userId}", False, error=e)
             return False
     
+    def test_get_aura_matches(self):
+        """Test getting aura matches (similar users)"""
+        if not self.token:
+            self._log_test("GET /aura/matches", False, error="No auth token available")
+            return False
+        
+        try:
+            headers = {"Authorization": f"Bearer {self.token}"}
+            response = requests.get(f"{self.base_url}/aura/matches", headers=headers)
+            passed = response.status_code == 200
+            
+            if passed:
+                data = response.json()
+                # Verify response structure
+                if 'data' in data and 'total' in data:
+                    self._log_test("GET /aura/matches", True, response)
+                    return True
+                else:
+                    self._log_test("GET /aura/matches", False, response, 
+                                  error="Missing 'data' or 'total' in response")
+                    return False
+            else:
+                self._log_test("GET /aura/matches", passed, response)
+                return passed
+        except Exception as e:
+            self._log_test("GET /aura/matches", False, error=e)
+            return False
+    
+    def test_get_aura_matches_with_pagination(self):
+        """Test getting aura matches with pagination parameters"""
+        if not self.token:
+            self._log_test("GET /aura/matches?limit=5&offset=0", False, error="No auth token available")
+            return False
+        
+        try:
+            headers = {"Authorization": f"Bearer {self.token}"}
+            params = {"limit": 5, "offset": 0}
+            response = requests.get(f"{self.base_url}/aura/matches", 
+                                   headers=headers, params=params)
+            passed = response.status_code == 200
+            
+            if passed:
+                data = response.json()
+                # Verify pagination works
+                if 'data' in data and len(data['data']) <= 5:
+                    self._log_test("GET /aura/matches?limit=5&offset=0", True, response)
+                    return True
+                else:
+                    self._log_test("GET /aura/matches?limit=5&offset=0", False, response,
+                                  error="Pagination not working correctly")
+                    return False
+            else:
+                self._log_test("GET /aura/matches?limit=5&offset=0", passed, response)
+                return passed
+        except Exception as e:
+            self._log_test("GET /aura/matches?limit=5&offset=0", False, error=e)
+            return False
+    
+    def test_calculate_compatibility(self):
+        """Test calculating compatibility with another user"""
+        if not self.token:
+            self._log_test("GET /aura/compatibility/{userId}", False, error="No auth token available")
+            return False
+        
+        if not self.user_id:
+            self._log_test("GET /aura/compatibility/{userId}", False, error="No user ID available")
+            return False
+        
+        try:
+            headers = {"Authorization": f"Bearer {self.token}"}
+            # Use a dummy user ID for testing (in real test, would use another registered user)
+            test_user_id = "u_test_dummy_123"
+            response = requests.get(f"{self.base_url}/aura/compatibility/{test_user_id}", 
+                                   headers=headers)
+            
+            # Should return 404 for non-existent user or 200 for existing user
+            passed = response.status_code in [200, 404]
+            
+            if response.status_code == 200:
+                data = response.json()
+                # Verify response structure
+                if all(k in data for k in ['compatibilityScore', 'sharedAesthetics', 'matchReason']):
+                    self._log_test("GET /aura/compatibility/{userId}", True, response)
+                    return True
+                else:
+                    self._log_test("GET /aura/compatibility/{userId}", False, response,
+                                  error="Missing required fields in response")
+                    return False
+            else:
+                self._log_test("GET /aura/compatibility/{userId}", passed, response)
+                return passed
+        except Exception as e:
+            self._log_test("GET /aura/compatibility/{userId}", False, error=e)
+            return False
+    
+    def test_calculate_compatibility_with_self(self):
+        """Test calculating compatibility with self (should fail)"""
+        if not self.token:
+            self._log_test("GET /aura/compatibility/{self}", False, error="No auth token available")
+            return False
+        
+        if not self.user_id:
+            self._log_test("GET /aura/compatibility/{self}", False, error="No user ID available")
+            return False
+        
+        try:
+            headers = {"Authorization": f"Bearer {self.token}"}
+            response = requests.get(f"{self.base_url}/aura/compatibility/{self.user_id}", 
+                                   headers=headers)
+            
+            # Should return 400 Bad Request
+            passed = response.status_code == 400
+            
+            self._log_test("GET /aura/compatibility/{self} (should fail)", passed, response)
+            return passed
+        except Exception as e:
+            self._log_test("GET /aura/compatibility/{self} (should fail)", False, error=e)
+            return False
+    
     # ─────────────────────────────────────────────────────────
     # ERROR HANDLING & VALIDATION TESTS
     # ─────────────────────────────────────────────────────────
@@ -1067,6 +1186,16 @@ class VibeCheckAPITester:
         self.test_get_current_user_aura()
         self.test_update_aura_profile()
         self.test_get_user_aura_by_id()
+        self.test_update_aura_invalid_color()
+        print()
+        
+        # Aura matching tests
+        print("💫 Aura Matching Tests")
+        print("-" * 70)
+        self.test_get_aura_matches()
+        self.test_get_aura_matches_with_pagination()
+        self.test_calculate_compatibility()
+        self.test_calculate_compatibility_with_self()
         print()
         
         # Shares tests
@@ -1134,7 +1263,7 @@ class VibeCheckAPITester:
 import pytest
 
 @pytest.fixture(scope="session")
-def tester():
+def tester() -> VibeCheckAPITester:
     """Create a single VibeCheckAPITester instance for all tests"""
     return VibeCheckAPITester()
 
@@ -1335,7 +1464,7 @@ if __name__ == "__main__":
                        help='Base URL of the API (default: http://localhost:3000/api/v1)')
     args = parser.parse_args()
     
-    tester = VibeCheckAPITester(base_url=args.url)
-    success = tester.run_all_tests()
+    api_tester = VibeCheckAPITester(base_url=args.url)
+    success = api_tester.run_all_tests()
     
     sys.exit(0 if success else 1)
