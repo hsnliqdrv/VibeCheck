@@ -89,10 +89,12 @@ def create_app():
     from app.routes.user_profile import user_profile_bp
     from app.routes.aura import aura_bp
     from app.routes.search import search_bp
+    from app.routes.social import social_bp
     app.register_blueprint(auth_bp, url_prefix='/api/v1/auth')
     app.register_blueprint(content_bp, url_prefix='/api/v1/content')
     app.register_blueprint(user_profile_bp, url_prefix='/api/v1/users')
     app.register_blueprint(aura_bp, url_prefix='/api/v1/aura')
     app.register_blueprint(search_bp, url_prefix='/api/v1/search')
+    app.register_blueprint(social_bp, url_prefix='/api/v1/social')
     
     return app

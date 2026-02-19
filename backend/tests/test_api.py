@@ -1081,6 +1081,367 @@ class VibeCheckAPITester:
             return False
     
     # ─────────────────────────────────────────────────────────
+    # SOCIAL POSTS TESTS
+    # ─────────────────────────────────────────────────────────
+    
+    def test_create_post(self):
+        """Test creating a community post"""
+        if not self.token:
+            self._log_test("POST /social/posts", False, error="No auth token available")
+            return False
+        
+        try:
+            headers = {"Authorization": f"Bearer {self.token}"}
+            payload = {
+                "category": "cinema",
+                "title": "Just watched this amazing film!",
+                "image": "https://example.com/test-post.jpg",
+                "dominantColor": "#FF5733"
+            }
+            
+            response = requests.post(f"{self.base_url}/social/posts", 
+                                    headers=headers, json=payload)
+            passed = response.status_code == 201
+            
+            if passed and response.json():
+                data = response.json()
+                if 'post' in data:
+                    self.test_post_id = data['post'].get('id')
+            
+            self._log_test("POST /social/posts", passed, response)
+            return passed
+        except Exception as e:
+            self._log_test("POST /social/posts", False, error=e)
+            return False
+    
+    def test_create_post_missing_fields(self):
+        """Test creating post with missing required fields"""
+        if not self.token:
+            self._log_test("POST /social/posts (missing fields)", False, error="No auth token available")
+            return False
+        
+        try:
+            headers = {"Authorization": f"Bearer {self.token}"}
+            payload = {
+                "category": "cinema"
+                # Missing title and image
+            }
+            
+            response = requests.post(f"{self.base_url}/social/posts", 
+                                    headers=headers, json=payload)
+            passed = response.status_code == 400
+            
+            self._log_test("POST /social/posts (missing fields)", passed, response)
+            return passed
+        except Exception as e:
+            self._log_test("POST /social/posts (missing fields)", False, error=e)
+            return False
+    
+    def test_create_post_invalid_category(self):
+        """Test creating post with invalid category"""
+        if not self.token:
+            self._log_test("POST /social/posts (invalid category)", False, error="No auth token available")
+            return False
+        
+        try:
+            headers = {"Authorization": f"Bearer {self.token}"}
+            payload = {
+                "category": "invalid_category",
+                "title": "Test post",
+                "image": "https://example.com/test.jpg"
+            }
+            
+            response = requests.post(f"{self.base_url}/social/posts", 
+                                    headers=headers, json=payload)
+            passed = response.status_code == 400
+            
+            self._log_test("POST /social/posts (invalid category)", passed, response)
+            return passed
+        except Exception as e:
+            self._log_test("POST /social/posts (invalid category)", False, error=e)
+            return False
+    
+    def test_get_community_posts(self):
+        """Test getting community posts"""
+        try:
+            response = requests.get(f"{self.base_url}/social/posts?limit=10")
+            passed = response.status_code == 200
+            
+            if passed and response.json():
+                data = response.json()
+                # Store a post ID for later tests if available
+                if 'posts' in data and len(data['posts']) > 0:
+                    self.test_post_id = data['posts'][0].get('id')
+            
+            self._log_test("GET /social/posts", passed, response)
+            return passed
+        except Exception as e:
+            self._log_test("GET /social/posts", False, error=e)
+            return False
+    
+    def test_get_posts_with_category_filter(self):
+        """Test getting posts filtered by category"""
+        try:
+            response = requests.get(f"{self.base_url}/social/posts?category=cinema&limit=10")
+            passed = response.status_code == 200
+            
+            self._log_test("GET /social/posts (category filter)", passed, response)
+            return passed
+        except Exception as e:
+            self._log_test("GET /social/posts (category filter)", False, error=e)
+            return False
+    
+    def test_get_posts_sorted_by_popular(self):
+        """Test getting posts sorted by popularity"""
+        try:
+            response = requests.get(f"{self.base_url}/social/posts?sortBy=popular&limit=10")
+            passed = response.status_code == 200
+            
+            self._log_test("GET /social/posts (sort by popular)", passed, response)
+            return passed
+        except Exception as e:
+            self._log_test("GET /social/posts (sort by popular)", False, error=e)
+            return False
+    
+    def test_get_post_by_id(self):
+        """Test getting a post by ID"""
+        if not hasattr(self, 'test_post_id') or not self.test_post_id:
+            self._log_test("GET /social/posts/{id}", False, error="No test post ID available")
+            return False
+        
+        try:
+            response = requests.get(f"{self.base_url}/social/posts/{self.test_post_id}")
+            passed = response.status_code == 200
+            
+            self._log_test("GET /social/posts/{id}", passed, response)
+            return passed
+        except Exception as e:
+            self._log_test("GET /social/posts/{id}", False, error=e)
+            return False
+    
+    def test_get_nonexistent_post(self):
+        """Test getting a non-existent post"""
+        try:
+            response = requests.get(f"{self.base_url}/social/posts/nonexistent_post_id")
+            passed = response.status_code == 404
+            
+            self._log_test("GET /social/posts/{id} (not found)", passed, response)
+            return passed
+        except Exception as e:
+            self._log_test("GET /social/posts/{id} (not found)", False, error=e)
+            return False
+    
+    def test_like_post(self):
+        """Test liking a post"""
+        if not self.token:
+            self._log_test("POST /social/posts/{id}/like", False, error="No auth token available")
+            return False
+        
+        if not hasattr(self, 'test_post_id') or not self.test_post_id:
+            self._log_test("POST /social/posts/{id}/like", False, error="No test post ID available")
+            return False
+        
+        try:
+            headers = {"Authorization": f"Bearer {self.token}"}
+            response = requests.post(f"{self.base_url}/social/posts/{self.test_post_id}/like", 
+                                    headers=headers)
+            passed = response.status_code == 200
+            
+            self._log_test("POST /social/posts/{id}/like", passed, response)
+            return passed
+        except Exception as e:
+            self._log_test("POST /social/posts/{id}/like", False, error=e)
+            return False
+    
+    def test_like_post_again(self):
+        """Test liking the same post again (should be idempotent)"""
+        if not self.token:
+            self._log_test("POST /social/posts/{id}/like (duplicate)", False, error="No auth token available")
+            return False
+        
+        if not hasattr(self, 'test_post_id') or not self.test_post_id:
+            self._log_test("POST /social/posts/{id}/like (duplicate)", False, error="No test post ID available")
+            return False
+        
+        try:
+            headers = {"Authorization": f"Bearer {self.token}"}
+            response = requests.post(f"{self.base_url}/social/posts/{self.test_post_id}/like", 
+                                    headers=headers)
+            passed = response.status_code == 200
+            
+            self._log_test("POST /social/posts/{id}/like (duplicate)", passed, response)
+            return passed
+        except Exception as e:
+            self._log_test("POST /social/posts/{id}/like (duplicate)", False, error=e)
+            return False
+    
+    def test_unlike_post(self):
+        """Test unliking a post"""
+        if not self.token:
+            self._log_test("DELETE /social/posts/{id}/like", False, error="No auth token available")
+            return False
+        
+        if not hasattr(self, 'test_post_id') or not self.test_post_id:
+            self._log_test("DELETE /social/posts/{id}/like", False, error="No test post ID available")
+            return False
+        
+        try:
+            headers = {"Authorization": f"Bearer {self.token}"}
+            response = requests.delete(f"{self.base_url}/social/posts/{self.test_post_id}/like", 
+                                      headers=headers)
+            passed = response.status_code == 200
+            
+            self._log_test("DELETE /social/posts/{id}/like", passed, response)
+            return passed
+        except Exception as e:
+            self._log_test("DELETE /social/posts/{id}/like", False, error=e)
+            return False
+    
+    def test_add_comment(self):
+        """Test adding a comment to a post"""
+        if not self.token:
+            self._log_test("POST /social/posts/{id}/comments", False, error="No auth token available")
+            return False
+        
+        if not hasattr(self, 'test_post_id') or not self.test_post_id:
+            self._log_test("POST /social/posts/{id}/comments", False, error="No test post ID available")
+            return False
+        
+        try:
+            headers = {"Authorization": f"Bearer {self.token}"}
+            payload = {
+                "text": "This is a test comment!"
+            }
+            
+            response = requests.post(f"{self.base_url}/social/posts/{self.test_post_id}/comments", 
+                                    headers=headers, json=payload)
+            passed = response.status_code == 201
+            
+            self._log_test("POST /social/posts/{id}/comments", passed, response)
+            return passed
+        except Exception as e:
+            self._log_test("POST /social/posts/{id}/comments", False, error=e)
+            return False
+    
+    def test_add_comment_missing_text(self):
+        """Test adding comment with missing text field"""
+        if not self.token:
+            self._log_test("POST /social/posts/{id}/comments (missing text)", False, error="No auth token available")
+            return False
+        
+        if not hasattr(self, 'test_post_id') or not self.test_post_id:
+            self._log_test("POST /social/posts/{id}/comments (missing text)", False, error="No test post ID available")
+            return False
+        
+        try:
+            headers = {"Authorization": f"Bearer {self.token}"}
+            payload = {}
+            
+            response = requests.post(f"{self.base_url}/social/posts/{self.test_post_id}/comments", 
+                                    headers=headers, json=payload)
+            passed = response.status_code == 400
+            
+            self._log_test("POST /social/posts/{id}/comments (missing text)", passed, response)
+            return passed
+        except Exception as e:
+            self._log_test("POST /social/posts/{id}/comments (missing text)", False, error=e)
+            return False
+    
+    def test_get_post_comments(self):
+        """Test getting comments for a post"""
+        if not hasattr(self, 'test_post_id') or not self.test_post_id:
+            self._log_test("GET /social/posts/{id}/comments", False, error="No test post ID available")
+            return False
+        
+        try:
+            response = requests.get(f"{self.base_url}/social/posts/{self.test_post_id}/comments?limit=10")
+            passed = response.status_code == 200
+            
+            self._log_test("GET /social/posts/{id}/comments", passed, response)
+            return passed
+        except Exception as e:
+            self._log_test("GET /social/posts/{id}/comments", False, error=e)
+            return False
+    
+    def test_delete_post(self):
+        """Test deleting a post"""
+        if not self.token:
+            self._log_test("DELETE /social/posts/{id}", False, error="No auth token available")
+            return False
+        
+        if not hasattr(self, 'test_post_id') or not self.test_post_id:
+            self._log_test("DELETE /social/posts/{id}", False, error="No test post ID available")
+            return False
+        
+        try:
+            headers = {"Authorization": f"Bearer {self.token}"}
+            response = requests.delete(f"{self.base_url}/social/posts/{self.test_post_id}", 
+                                      headers=headers)
+            passed = response.status_code == 204
+            
+            self._log_test("DELETE /social/posts/{id}", passed, response)
+            return passed
+        except Exception as e:
+            self._log_test("DELETE /social/posts/{id}", False, error=e)
+            return False
+    
+    def test_delete_post_unauthorized(self):
+        """Test deleting a post created by another user (should fail)"""
+        if not self.token:
+            self._log_test("DELETE /social/posts/{id} (unauthorized)", False, error="No auth token available")
+            return False
+        
+        # Create a new user and post to test authorization
+        try:
+            # Register second user
+            username2 = f"testuser2_{self._random_string()}"
+            email2 = f"{username2}@test.com"
+            register_payload = {
+                "email": email2,
+                "username": username2,
+                "password": "Test123456!"
+            }
+            reg_response = requests.post(f"{self.base_url}/auth/register", json=register_payload)
+            
+            # Login as second user
+            login_payload = {"email": email2, "password": "Test123456!"}
+            login_response = requests.post(f"{self.base_url}/auth/login", json=login_payload)
+            
+            if login_response.status_code == 200:
+                token2 = login_response.json().get('token')
+                
+                # Create post as second user
+                headers2 = {"Authorization": f"Bearer {token2}"}
+                post_payload = {
+                    "category": "music",
+                    "title": "Test post by user 2",
+                    "image": "https://example.com/test2.jpg"
+                }
+                post_response = requests.post(f"{self.base_url}/social/posts", 
+                                             headers=headers2, json=post_payload)
+                
+                if post_response.status_code == 201:
+                    post_id = post_response.json()['post']['id']
+                    
+                    # Try to delete as first user (should fail)
+                    headers1 = {"Authorization": f"Bearer {self.token}"}
+                    delete_response = requests.delete(f"{self.base_url}/social/posts/{post_id}", 
+                                                     headers=headers1)
+                    passed = delete_response.status_code == 403
+                    
+                    # Cleanup - delete as the owner
+                    requests.delete(f"{self.base_url}/social/posts/{post_id}", headers=headers2)
+                    
+                    self._log_test("DELETE /social/posts/{id} (unauthorized)", passed, delete_response)
+                    return passed
+            
+            self._log_test("DELETE /social/posts/{id} (unauthorized)", False, error="Setup failed")
+            return False
+        except Exception as e:
+            self._log_test("DELETE /social/posts/{id} (unauthorized)", False, error=e)
+            return False
+    
+    # ─────────────────────────────────────────────────────────
     # RUN ALL TESTS
     # ─────────────────────────────────────────────────────────
     
@@ -1203,6 +1564,27 @@ class VibeCheckAPITester:
         print("-" * 70)
         self.test_create_share()
         self.test_get_user_shares()
+        print()
+        
+        # Social Posts tests
+        print("💬 Social Posts Tests")
+        print("-" * 70)
+        self.test_create_post()
+        self.test_create_post_missing_fields()
+        self.test_create_post_invalid_category()
+        self.test_get_community_posts()
+        self.test_get_posts_with_category_filter()
+        self.test_get_posts_sorted_by_popular()
+        self.test_get_post_by_id()
+        self.test_get_nonexistent_post()
+        self.test_like_post()
+        self.test_like_post_again()
+        self.test_unlike_post()
+        self.test_add_comment()
+        self.test_add_comment_missing_text()
+        self.test_get_post_comments()
+        self.test_delete_post_unauthorized()
+        self.test_delete_post()
         print()
         
         # Pagination tests
@@ -1386,6 +1768,74 @@ def test_create_share(tester):
 
 def test_get_user_shares(tester):
     tester.test_get_user_shares()
+
+
+# ─────────────────────────────────────────────────────────
+# SOCIAL POSTS TESTS
+# ─────────────────────────────────────────────────────────
+
+def test_create_post(tester):
+    tester.test_create_post()
+
+
+def test_create_post_missing_fields(tester):
+    assert tester.test_create_post_missing_fields()
+
+
+def test_create_post_invalid_category(tester):
+    assert tester.test_create_post_invalid_category()
+
+
+def test_get_community_posts(tester):
+    assert tester.test_get_community_posts()
+
+
+def test_get_posts_with_category_filter(tester):
+    assert tester.test_get_posts_with_category_filter()
+
+
+def test_get_posts_sorted_by_popular(tester):
+    assert tester.test_get_posts_sorted_by_popular()
+
+
+def test_get_post_by_id(tester):
+    tester.test_get_post_by_id()
+
+
+def test_get_nonexistent_post(tester):
+    assert tester.test_get_nonexistent_post()
+
+
+def test_like_post(tester):
+    tester.test_like_post()
+
+
+def test_like_post_again(tester):
+    tester.test_like_post_again()
+
+
+def test_unlike_post(tester):
+    tester.test_unlike_post()
+
+
+def test_add_comment(tester):
+    tester.test_add_comment()
+
+
+def test_add_comment_missing_text(tester):
+    assert tester.test_add_comment_missing_text()
+
+
+def test_get_post_comments(tester):
+    tester.test_get_post_comments()
+
+
+def test_delete_post(tester):
+    tester.test_delete_post()
+
+
+def test_delete_post_unauthorized(tester):
+    tester.test_delete_post_unauthorized()
 
 
 # ─────────────────────────────────────────────────────────
