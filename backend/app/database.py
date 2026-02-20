@@ -18,7 +18,7 @@ def init_db(app):
     session_factory = sessionmaker(bind=engine)
     
     # Import all models to ensure they're registered
-    from app.models import user, content, share, post
+    from app.models import user, content, share, post, badge
     
     # Create all tables
     Base.metadata.create_all(engine)
