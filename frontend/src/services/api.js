@@ -78,5 +78,10 @@ export const getContentByCategory = (category, params = {}) => {
   if (!fetcher) throw new Error(`Unknown category: ${category}`);
   return fetcher(params);
 };
-
+export const loginUser = (credentials) =>
+  api.post("/auth/login", credentials).then((r) => r.data);
+export const registerUser = (userData) =>
+  api.post("/auth/register", userData).then((r) => r.data);
+export const getCuratorProgress = () =>
+  api.get("/users/curator-progress").then((r) => r.data);
 export default api;

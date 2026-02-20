@@ -3,6 +3,71 @@
   margin: 0 auto;
   padding: 2rem;
 }
+.curator-card {
+  background: #1a1f2e; /* Темный фон из скрина */
+  color: white;
+  padding: 1.5rem;
+  border-radius: 16px;
+  margin-bottom: 2rem;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+}
+
+.curator-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.curator-level-badge {
+  background: #e91e63;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+}
+
+.xp-progress-container {
+  background: #2d3548;
+  height: 12px;
+  border-radius: 6px;
+  position: relative;
+  margin: 1rem 0;
+}
+
+.xp-progress-fill {
+  background: linear-gradient(90deg, #667eea, #e91e63);
+  height: 100%;
+  border-radius: 6px;
+  transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.curator-stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.c-stat-item {
+  background: #252b3d;
+  padding: 1rem;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+.c-icon-box.blue { color: #00d2ff; }
+.c-icon-box.orange { color: #ff9966; }
+.c-icon-box.purple { color: #a18cd1; }
+.c-icon-box.green { color: #84fb95; }
+
+.c-icon-box.blue { color: #00d2ff; }
+.c-icon-box.orange { color: #ff9966; }
+.c-icon-box.purple { color: #a18cd1; }
+.c-icon-box.green { color: #84fb95; }
 
 .profile-section {
   background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);

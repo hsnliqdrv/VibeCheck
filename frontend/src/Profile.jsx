@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Clapperboard, Music, Gamepad2, BookOpen, Plane } from "lucide-react";
+import { Clapperboard, Music, Gamepad2, BookOpen, Plane, Star, Flame, Trophy, TrendingUp } from "lucide-react";
 import {
   getUserProfile,
   updateUserProfile,
   getAuraProfile,
   updateAuraProfile,
+  getCuratorProgress
 } from "./services/api";
 import "./Profile.css";
 
@@ -21,38 +22,32 @@ export default function Profile() {
   const navigate = useNavigate();
   const [userProfile, setUserProfile] = useState(null);
   const [auraProfile, setAuraProfile] = useState(null);
+  const [curatorData, setCuratorData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Edit states
   const [editingProfile, setEditingProfile] = useState(false);
   const [editingAura, setEditingAura] = useState(false);
-  const [profileForm, setProfileForm] = useState({
-    bio: "",
-    avatar: "",
-  });
-  const [auraForm, setAuraForm] = useState({
-    aestheticTags: [],
-    auraColors: [],
-  });
+  const [profileForm, setProfileForm] = useState({ bio: "", avatar: "" });
+  const [auraForm, setAuraForm] = useState({ aestheticTags: [], auraColors: [] });
   const [newTag, setNewTag] = useState("");
   const [newColor, setNewColor] = useState("#FF6B9D");
 
-  // Load data
   useEffect(() => {
     const loadData = async () => {
       try {
         setLoading(true);
-        const [userRes, auraRes] = await Promise.all([
+        const [userRes, auraRes, curatorRes] = await Promise.all([
           getUserProfile(),
           getAuraProfile(),
+          getCuratorProgress(),
         ]);
+        
         setUserProfile(userRes);
         setAuraProfile(auraRes);
-        setProfileForm({
-          bio: userRes.bio || "",
-          avatar: userRes.avatar || "",
-        });
+        setCuratorData(curatorRes);
+
+        setProfileForm({ bio: userRes.bio || "", avatar: userRes.avatar || "" });
         setAuraForm({
           aestheticTags: auraRes.aestheticTags || [],
           auraColors: auraRes.auraColors || [],
@@ -68,323 +63,81 @@ export default function Profile() {
     loadData();
   }, [navigate]);
 
-  const handleProfileSave = async () => {
-    try {
-      const updated = await updateUserProfile(profileForm);
-      setUserProfile(updated);
-      setEditingProfile(false);
-    } catch (err) {
-      setError(err.response?.data?.message || "Failed to update profile");
-    }
-  };
-
-  const handleAuraSave = async () => {
-    try {
-      const updated = await updateAuraProfile(auraForm);
-      setAuraProfile(updated);
-      setEditingAura(false);
-    } catch (err) {
-      setError(err.response?.data?.message || "Failed to update aura");
-    }
-  };
-
-  const addTag = () => {
-    if (newTag.trim() && !auraForm.aestheticTags.includes(newTag)) {
-      setAuraForm({
-        ...auraForm,
-        aestheticTags: [...auraForm.aestheticTags, newTag.trim()],
-      });
-      setNewTag("");
-    }
-  };
-
-  const removeTag = (tag) => {
-    setAuraForm({
-      ...auraForm,
-      aestheticTags: auraForm.aestheticTags.filter((t) => t !== tag),
-    });
-  };
-
-  const addColor = () => {
-    if (!auraForm.auraColors.includes(newColor)) {
-      setAuraForm({
-        ...auraForm,
-        auraColors: [...auraForm.auraColors, newColor],
-      });
-    }
-  };
-
-  const removeColor = (color) => {
-    setAuraForm({
-      ...auraForm,
-      auraColors: auraForm.auraColors.filter((c) => c !== color),
-    });
-  };
-
   if (loading) return <div className="profile-container">Loading...</div>;
 
   return (
     <div className="profile-container">
       {error && <div className="error-message">{error}</div>}
-
-      {/* User Profile Section */}
       <section className="profile-section">
         <div className="section-header">
           <h2>Profile</h2>
-          <button
-            className="edit-btn"
-            onClick={() => setEditingProfile(!editingProfile)}
-          >
+          <button className="edit-btn" onClick={() => setEditingProfile(!editingProfile)}>
             {editingProfile ? "Cancel" : "Edit"}
           </button>
         </div>
-
-        {userProfile && (
-          <div className="profile-content">
-            <div className="profile-field">
-              <label>Username</label>
-              <p className="field-value">{userProfile.username}</p>
-            </div>
-
-            <div className="profile-field">
-              <label>Email</label>
-              <p className="field-value">{userProfile.email}</p>
-            </div>
-
-            <div className="profile-field">
-              <label>Bio</label>
-              {editingProfile ? (
-                <textarea
-                  value={profileForm.bio}
-                  onChange={(e) =>
-                    setProfileForm({ ...profileForm, bio: e.target.value })
-                  }
-                  className="textarea-input"
-                  placeholder="Tell us about yourself..."
-                  maxLength="500"
-                />
-              ) : (
-                <p className="field-value">{profileForm.bio || "No bio yet"}</p>
-              )}
-            </div>
-
-            <div className="profile-field">
-              <label>Avatar URL</label>
-              {editingProfile ? (
-                <input
-                  type="url"
-                  value={profileForm.avatar}
-                  onChange={(e) =>
-                    setProfileForm({ ...profileForm, avatar: e.target.value })
-                  }
-                  className="text-input"
-                  placeholder="https://example.com/avatar.jpg"
-                />
-              ) : profileForm.avatar ? (
-                <div className="avatar-preview">
-                  <img src={profileForm.avatar} alt="Avatar" />
-                </div>
-              ) : (
-                <p className="field-value">No avatar</p>
-              )}
-            </div>
-
-            {editingProfile && (
-              <button className="save-btn" onClick={handleProfileSave}>
-                Save Changes
-              </button>
-            )}
-          </div>
-        )}
       </section>
-
-      {/* Aura Profile Section */}
-      <section className="profile-section">
-        <div className="section-header">
-          <h2>Aura Profile</h2>
-          <button
-            className="edit-btn"
-            onClick={() => setEditingAura(!editingAura)}
-          >
-            {editingAura ? "Cancel" : "Edit"}
-          </button>
-        </div>
-
-        {auraProfile && (
-          <div className="profile-content">
-            {/* Aesthetic Tags */}
-            <div className="profile-field">
-              <label>Aesthetic Tags</label>
-              {editingAura ? (
-                <div className="tags-editor">
-                  <div className="tag-input-group">
-                    <input
-                      type="text"
-                      value={newTag}
-                      onChange={(e) => setNewTag(e.target.value)}
-                      onKeyPress={(e) => e.key === "Enter" && addTag()}
-                      className="text-input"
-                      placeholder="e.g., minimalist, vintage, dark academia"
-                    />
-                    <button className="add-btn" onClick={addTag}>
-                      Add
-                    </button>
-                  </div>
-                  <div className="tags-display">
-                    {auraForm.aestheticTags.map((tag) => (
-                      <div key={tag} className="tag">
-                        {tag}
-                        <button
-                          className="remove-tag-btn"
-                          onClick={() => removeTag(tag)}
-                        >
-                          ×
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                <div className="tags-display">
-                  {auraForm.aestheticTags.length > 0 ? (
-                    auraForm.aestheticTags.map((tag) => (
-                      <div key={tag} className="tag">
-                        {tag}
-                      </div>
-                    ))
-                  ) : (
-                    <p className="field-value">No tags yet</p>
-                  )}
-                </div>
-              )}
+      {curatorData && (
+        <section className="curator-section">
+          <div className="curator-card">
+            <div className="curator-header">
+              <div className="curator-title-group">
+                <h3>Curator Status</h3>
+                <p className="curator-subtitle">Your journey to legendary taste</p>
+              </div>
+              <div className="curator-level-badge">{curatorData.level}</div>
             </div>
 
-            {/* Aura Colors */}
-            <div className="profile-field">
-              <label>Aura Colors</label>
-              {editingAura ? (
-                <div className="colors-editor">
-                  <div className="color-input-group">
-                    <input
-                      type="color"
-                      value={newColor}
-                      onChange={(e) => setNewColor(e.target.value)}
-                      className="color-input"
-                    />
-                    <button className="add-btn" onClick={addColor}>
-                      Add Color
-                    </button>
-                  </div>
-                  <div className="colors-display">
-                    {auraForm.auraColors.map((color) => (
-                      <div key={color} className="color-item">
-                        <div
-                          className="color-swatch"
-                          style={{ backgroundColor: color }}
-                        />
-                        <span>{color}</span>
-                        <button
-                          className="remove-color-btn"
-                          onClick={() => removeColor(color)}
-                        >
-                          ×
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                <div className="colors-display">
-                  {auraForm.auraColors.length > 0 ? (
-                    auraForm.auraColors.map((color) => (
-                      <div key={color} className="color-item">
-                        <div
-                          className="color-swatch"
-                          style={{ backgroundColor: color }}
-                        />
-                        <span>{color}</span>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="field-value">No colors yet</p>
-                  )}
-                </div>
-              )}
+            <div className="curator-status-row">
+              <span className="curator-role">{curatorData.roleName}</span>
+              <span className="curator-xp">{curatorData.currentXP} XP</span>
             </div>
 
-            {/* Top Categories */}
-            {auraProfile.topCategories && auraProfile.topCategories.length > 0 && (
-              <div className="profile-field">
-                <label>Content Distribution</label>
-                <div className="categories-stats">
-                  {auraProfile.topCategories.map((cat) => (
-                    <div key={cat.category} className="category-stat">
-                      <span className="category-name">{cat.category}</span>
-                      <div className="progress-bar">
-                        <div
-                          className="progress-fill"
-                          style={{ width: `${cat.percentage}%` }}
-                        />
-                      </div>
-                      <span className="percentage">{cat.percentage}%</span>
-                    </div>
-                  ))}
+            <div className="xp-progress-container">
+              <div 
+                className="xp-progress-fill" 
+                style={{ width: `${(curatorData.currentXP / curatorData.nextLevelXP) * 100}%` }}
+              ></div>
+              <span className="xp-needed-text">
+                {curatorData.nextLevelXP - curatorData.currentXP} XP needed to Level {curatorData.level + 1}
+              </span>
+            </div>
+
+            <div className="curator-stats-grid">
+              <div className="c-stat-item">
+                <div className="c-icon-box blue"><Star size={18} /></div>
+                <div className="c-stat-info">
+                  <span className="c-val">{curatorData.stats.totalShares}</span>
+                  <span className="c-lab">Total Shares</span>
                 </div>
               </div>
-            )}
-
-            {editingAura && (
-              <button className="save-btn" onClick={handleAuraSave}>
-                Save Changes
-              </button>
-            )}
-          </div>
-        )}
-      </section>
-
-      {/* Recent Shares Section */}
-      <section className="profile-section">
-        <h2>Recent Shares</h2>
-        {auraProfile && auraProfile.recentShares && auraProfile.recentShares.length > 0 ? (
-          <div className="shares-grid">
-            {auraProfile.recentShares.map((share) => {
-              const Icon = CATEGORY_ICONS[share.category];
-              return (
-                <div key={share.id} className="share-card">
-                  {share.image && (
-                    <div className="share-image-container">
-                      <img src={share.image} alt={share.title} className="share-image" />
-                      {share.dominantColor && (
-                        <div
-                          className="dominant-color-indicator"
-                          style={{ backgroundColor: share.dominantColor }}
-                          title={share.dominantColor}
-                        />
-                      )}
-                      <div className="share-category-badge">
-                        {Icon && <Icon size={16} />}
-                        <span>{share.category}</span>
-                      </div>
-                    </div>
-                  )}
-                  <div className="share-info">
-                    <h4 className="share-title">{share.title}</h4>
-                    {share.caption && <p className="share-caption">{share.caption}</p>}
-                    <p className="share-date">
-                      {new Date(share.timestamp).toLocaleDateString(undefined, {
-                        year: "numeric",
-                        month: "short",
-                        day: "numeric",
-                      })}
-                    </p>
-                  </div>
+              <div className="c-stat-item">
+                <div className="c-icon-box orange"><Flame size={18} /></div>
+                <div className="c-stat-info">
+                  <span className="c-val">{curatorData.stats.dayStreak}</span>
+                  <span className="c-lab">Day Streak</span>
                 </div>
-              );
-            })}
+              </div>
+              <div className="c-stat-item">
+                <div className="c-icon-box purple"><Trophy size={18} /></div>
+                <div className="c-stat-info">
+                  <span className="c-val">{curatorData.stats.badges}</span>
+                  <span className="c-lab">Badges</span>
+                </div>
+              </div>
+              <div className="c-stat-item">
+                <div className="c-icon-box green"><TrendingUp size={18} /></div>
+                <div className="c-stat-info">
+                  <span className="c-val">{curatorData.stats.earlyFinds}</span>
+                  <span className="c-lab">Early Finds</span>
+                </div>
+              </div>
+            </div>
           </div>
-        ) : (
-          <p className="empty-state">No shares yet. Start sharing your favorites!</p>
-        )}
+        </section>
+      )}
+      <section className="profile-section">
+      </section>
+      <section className="profile-section">
       </section>
     </div>
   );
