@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
 import Login from "./Login";
 import Register from "./Register";
 import { StoryGenerator } from "./components/stories";
+import BadgesPage from "./badges/Badges";
 import "./App.css";
 
 function App() {
@@ -19,6 +20,7 @@ function App() {
           <div className="nav-links">
             <Link to="/">Login</Link>
             <Link to="/register">Register</Link>
+            <Link to="/badges">Badges</Link>
             <Link to="/stories">Stories</Link>
           </div>
         </nav>
@@ -26,6 +28,7 @@ function App() {
         <Routes>
           <Route path="/" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/badges" element={<BadgesPage />} />
           <Route path="/stories" element={<StoryGenerator />} />
         </Routes>
       </div>
