@@ -4,6 +4,7 @@ from sqlalchemy import desc
 from app.database import get_db
 from app.models.user import User
 from app.models.post import Post, Comment, PostLike
+from app.services.badge_service import BadgeService
 
 social_bp = Blueprint('social', __name__)
 
@@ -179,6 +180,13 @@ def create_community_post():
         db.add(post)
         db.commit()
         db.refresh(post)
+        
+        # Check and unlock badges
+        try:
+            BadgeService.check_and_unlock_badges(current_user_id)
+        except Exception as badge_error:
+            # Don't fail the request if badge checking fails
+            print(f"Badge unlock error: {badge_error}")
         
         return jsonify({
             'message': 'Post created successfully',
@@ -361,6 +369,13 @@ def like_post(post_id):
         
         db.commit()
         db.refresh(post)
+        
+        # Check and unlock badges
+        try:
+            BadgeService.check_and_unlock_badges(current_user_id)
+        except Exception as badge_error:
+            # Don't fail the request if badge checking fails
+            print(f"Badge unlock error: {badge_error}")
         
         return jsonify({
             'message': 'Post liked successfully',
