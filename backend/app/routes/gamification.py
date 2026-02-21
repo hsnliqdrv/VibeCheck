@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from flask_jwt_extended import jwt_required, get_jwt_identity
+from flask_jwt_extended import jwt_required, get_jwt_identity, verify_jwt_in_request
 from app.database import get_db
 from app.models.gamification import Badge, UserBadge, CuratorLevel, UserCuratorStats
 from app.models.user import User
@@ -285,8 +285,26 @@ def get_badges():
         # Fetch paginated results
         badges = query.offset(offset).limit(limit).all()
         
-        # Return direct list of badges as per OpenAPI spec
-        return jsonify([badge.to_dict() for badge in badges]), 200
+        # Check if user is authenticated (optional)
+        user_id = None
+        user_badges_dict = {}
+        try:
+            verify_jwt_in_request(optional=True)
+            user_id = get_jwt_identity()
+            if user_id:
+                # Fetch user's unlocked badges
+                user_badges = db.query(UserBadge).filter_by(user_id=user_id).all()
+                user_badges_dict = {ub.badge_id: ub for ub in user_badges}
+        except:
+            pass  # No authentication, continue without user data
+        
+        # Return direct list of badges with unlock status
+        badges_list = []
+        for badge in badges:
+            user_badge = user_badges_dict.get(badge.id)
+            badges_list.append(badge.to_dict(user_badge=user_badge))
+        
+        return jsonify(badges_list), 200
     
     except ValueError as e:
         return jsonify({
@@ -494,53 +512,39 @@ def get_curator_stats():
         description: User's curator statistics
         schema:
           type: object
+          required:
+            - totalShares
+            - totalXP
+            - currentLevel
           properties:
-            userId:
-              type: string
-              example: u_123abc456def
             totalShares:
               type: integer
               example: 42
-            currentXp:
+            totalXP:
               type: integer
-              example: 750
+              example: 2500
             currentLevel:
               type: integer
               example: 3
-            totalXp:
+            streakDays:
               type: integer
-              example: 2500
-            totalPosts:
+              example: 7
+            badges:
+              type: array
+              description: Array of earned badges
+              items:
+                $ref: '#/components/schemas/Badge'
+            completedFilmographies:
+              type: array
+              description: Array of director/artist names
+              items:
+                type: string
+            finishedBooks:
               type: integer
-              example: 18
-            totalLikesReceived:
+              example: 5
+            earlyDiscoveries:
               type: integer
-              example: 156
-            totalCommentsReceived:
-              type: integer
-              example: 34
-            contentDistribution:
-              type: object
-              properties:
-                movies:
-                  type: integer
-                albums:
-                  type: integer
-                games:
-                  type: integer
-                books:
-                  type: integer
-                locations:
-                  type: integer
-            community:
-              type: object
-              properties:
-                followersCount:
-                  type: integer
-                followingCount:
-                  type: integer
-                roomsJoined:
-                  type: integer
+              example: 3
       401:
         description: Unauthorized
         schema:
@@ -605,27 +609,32 @@ def get_curator_stats_by_id(user_id):
         description: User's curator statistics
         schema:
           type: object
+          required:
+            - totalShares
+            - totalXP
+            - currentLevel
           properties:
-            userId:
-              type: string
             totalShares:
               type: integer
-            currentXp:
+            totalXP:
               type: integer
             currentLevel:
               type: integer
-            totalXp:
+            streakDays:
               type: integer
-            totalPosts:
+            badges:
+              type: array
+              description: Array of earned badges
+              items:
+                $ref: '#/components/schemas/Badge'
+            completedFilmographies:
+              type: array
+              items:
+                type: string
+            finishedBooks:
               type: integer
-            totalLikesReceived:
+            earlyDiscoveries:
               type: integer
-            totalCommentsReceived:
-              type: integer
-            contentDistribution:
-              type: object
-            community:
-              type: object
       404:
         description: User not found
         schema:

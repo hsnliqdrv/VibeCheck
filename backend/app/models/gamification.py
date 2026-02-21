@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Any, Optional
 from sqlalchemy import Column, String, DateTime, Text, ForeignKey, Integer, Float
 from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import JSON
@@ -28,13 +29,13 @@ class Badge(Base):
     # Relationships
     user_badges = relationship('UserBadge', back_populates='badge', cascade='all, delete-orphan')
     
-    def to_dict(self, user_badge=None):
+    def to_dict(self, user_badge=None) -> dict[str, Any]:
         """Convert badge to dictionary matching OpenAPI Badge schema
         
         Args:
             user_badge: Optional UserBadge instance to include unlock info
         """
-        result = {
+        result: dict[str, Any] = {
             'id': self.id,
             'name': self.name,
             'description': self.description,
