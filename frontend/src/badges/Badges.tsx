@@ -4,8 +4,10 @@ import {
   Trophy, Star, Flame, Zap, Crown, Heart, Globe, BookOpen,
   Gamepad2, Music, Clapperboard, Plane, Lock, Award, Sparkles,
   Target, Users, Compass, Moon, ChevronDown, ChevronUp,
+  Footprints, PlayCircle, Rocket, Palette, Headphones,
+  MessageCircle, ThumbsUp, TrendingUp, CalendarCheck,
 } from 'lucide-react';
-import { getUserBadges, getAllBadges } from '../services/api';
+import { getAllBadges } from '../services/api';
 import './Badges.css';
 
 interface Badge {
@@ -19,6 +21,30 @@ interface Badge {
   unlockedDate?: string;
 }
 
+// Map badge names from seed_gamification.py to lucide-react icons
+const BADGE_NAME_ICONS: Record<string, React.ElementType> = {
+  'first steps': Footprints,
+  'getting started': PlayCircle,
+  'early adopter': Rocket,
+  'diverse curator': Palette,
+  'cinephile': Clapperboard,
+  'audiophile': Headphones,
+  'gaming legend': Gamepad2,
+  'bookworm': BookOpen,
+  'world explorer': Globe,
+  'ultimate collector': Trophy,
+  'social butterfly': Users,
+  'conversationalist': MessageCircle,
+  'community favorite': Heart,
+  'influencer': TrendingUp,
+  'consistent creator': CalendarCheck,
+  'dedicated curator': Target,
+  'eternal flame': Flame,
+  'taste maker': Sparkles,
+  'legendary curator': Crown,
+  'aura master': Zap,
+};
+
 const ICON_MAP: Record<string, React.ElementType> = {
   trophy: Trophy, star: Star, flame: Flame, fire: Flame,
   zap: Zap, crown: Crown, heart: Heart, globe: Globe,
@@ -30,13 +56,24 @@ const ICON_MAP: Record<string, React.ElementType> = {
 };
 
 function resolveLucideIcon(badge: Badge): React.ElementType {
+  // First, try to match by badge name
+  const badgeNameKey = badge.name.toLowerCase();
+  if (BADGE_NAME_ICONS[badgeNameKey]) {
+    return BADGE_NAME_ICONS[badgeNameKey];
+  }
+  
+  // Then try icon property
   if (badge.icon && !badge.icon.startsWith('http')) {
     const key = badge.icon.toLowerCase().replace(/\s+/g, '');
     if (ICON_MAP[key]) return ICON_MAP[key];
   }
+  
+  // Then try category
   if (badge.category && ICON_MAP[badge.category.toLowerCase()]) {
     return ICON_MAP[badge.category.toLowerCase()];
   }
+  
+  // Finally, fall back to rarity
   const r = badge.rarity?.toLowerCase();
   if (r === 'legendary') return Crown;
   if (r === 'epic') return Zap;
@@ -93,14 +130,9 @@ const BadgesPage: React.FC = () => {
   useEffect(() => {
     const load = async () => {
       try {
-        const res = await getUserBadges();
+        const res = await getAllBadges();
         const list: Badge[] = Array.isArray(res) ? res : (res?.badges ?? []);
-        if (list.length > 0) {
-          setBadges(list);
-        } else {
-          const all = await getAllBadges();
-          setBadges(Array.isArray(all) ? all : []);
-        }
+        setBadges(list);
       } catch (err) {
         console.error('Failed to load badges:', err);
       }
