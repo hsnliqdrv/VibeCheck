@@ -23,6 +23,22 @@ const DEFAULT_STYLE = {
   cardLayout: "default",
 };
 
+function getImageFromContent(category, content) {
+  if (!content) return null;
+  switch (category) {
+    case "cinema":
+      return content.poster || content.image;
+    case "music":
+    case "games":
+    case "books":
+      return content.cover || content.image;
+    case "travel":
+      return content.image;
+    default:
+      return null;
+  }
+}
+
 export default function StoryGenerator() {
   const [category, setCategory] = useState("cinema");
   const [selectedContent, setSelectedContent] = useState(null);
@@ -47,11 +63,16 @@ export default function StoryGenerator() {
     setSharing(true);
     setShareResult(null);
     try {
-      const share = await createShare({
+      const image = getImageFromContent(category, selectedContent);
+      const sharePayload = {
         category,
         contentId: selectedContent.id,
+        title: selectedContent.title || selectedContent.name,
+        image: image || undefined,
+        dominantColor: selectedContent.dominantColor || undefined,
         caption: caption.trim() || undefined,
-      });
+      };
+      const share = await createShare(sharePayload);
       setShareResult({ type: "success", data: share });
     } catch (err) {
       setShareResult({

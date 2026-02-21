@@ -1,6 +1,6 @@
 from datetime import datetime
 from sqlalchemy import Column, String, DateTime, Text
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import UUID, JSON
 import uuid
 import bcrypt
 from app.database import Base
@@ -16,6 +16,11 @@ class User(Base):
     password_hash = Column(String(255), nullable=False)
     avatar = Column(Text, nullable=True)
     bio = Column(String(500), nullable=True)
+    
+    # Aura profile fields
+    aura_colors = Column(JSON, nullable=True)  # Array of hex color codes
+    aesthetic_tags = Column(JSON, nullable=True)  # Array of aesthetic style tags
+    
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
     

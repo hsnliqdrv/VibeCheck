@@ -1,11 +1,42 @@
-import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
+import { useCallback, useEffect, useState } from "react";
+import { BrowserRouter as Router, Routes, Route, Link, useNavigate } from "react-router-dom";
 import Login from "./Login";
 import Register from "./Register";
+import Profile from "./Profile";
 import { StoryGenerator } from "./components/stories";
 import BadgesPage from "./badges/Badges";
 import "./App.css";
 
-function App() {
+function AppShell() {
+  const [isAuthed, setIsAuthed] = useState(() => Boolean(localStorage.getItem("token")));
+  const navigate = useNavigate();
+
+  const syncAuthState = useCallback(() => {
+    setIsAuthed(Boolean(localStorage.getItem("token")));
+  }, []);
+
+  useEffect(() => {
+    syncAuthState();
+    const handleStorage = (event) => {
+      if (event.key === "token") syncAuthState();
+    };
+    const handleAuthChanged = () => syncAuthState();
+    window.addEventListener("storage", handleStorage);
+    window.addEventListener("auth-changed", handleAuthChanged);
+    return () => {
+      window.removeEventListener("storage", handleStorage);
+      window.removeEventListener("auth-changed", handleAuthChanged);
+    };
+  }, [syncAuthState]);
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    setIsAuthed(false);
+    window.dispatchEvent(new Event("auth-changed"));
+    navigate("/");
+  };
+
   return (
     <Router>
       <div className="app">
@@ -20,7 +51,6 @@ function App() {
           <div className="nav-links">
             <Link to="/">Login</Link>
             <Link to="/register">Register</Link>
-            <Link to="/badges">Badges</Link>
             <Link to="/stories">Stories</Link>
           </div>
         </nav>
@@ -28,12 +58,9 @@ function App() {
         <Routes>
           <Route path="/" element={<Login />} />
           <Route path="/register" element={<Register />} />
-          <Route path="/badges" element={<BadgesPage />} />
           <Route path="/stories" element={<StoryGenerator />} />
         </Routes>
       </div>
     </Router>
   );
 }
-
-export default App;

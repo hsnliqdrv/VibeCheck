@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, jsonify
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
 from flasgger import Swagger
@@ -16,6 +16,28 @@ def create_app():
     # Initialize extensions
     CORS(app)
     jwt.init_app(app)
+    
+    # JWT error handlers - ensure proper 401 responses
+    @jwt.unauthorized_loader
+    def missing_token_callback(error):
+        return jsonify({
+            'error': 'Unauthorized',
+            'message': 'Missing or invalid authentication token'
+        }), 401
+    
+    @jwt.invalid_token_loader
+    def invalid_token_callback(error):
+        return jsonify({
+            'error': 'Unauthorized',
+            'message': 'Invalid authentication token'
+        }), 401
+    
+    @jwt.expired_token_loader
+    def expired_token_callback(jwt_header, jwt_data):
+        return jsonify({
+            'error': 'Unauthorized',
+            'message': 'Token has expired'
+        }), 401
     
     # Initialize Swagger - generates docs from actual implementation
     swagger_config = {
@@ -63,6 +85,18 @@ def create_app():
     
     # Register blueprints
     from app.routes.auth import auth_bp
+    from app.routes.content import content_bp
+    from app.routes.user_profile import user_profile_bp
+    from app.routes.aura import aura_bp
+    from app.routes.search import search_bp
+    from app.routes.social import social_bp
+    from app.routes.gamification import gamification_bp
     app.register_blueprint(auth_bp, url_prefix='/api/v1/auth')
+    app.register_blueprint(content_bp, url_prefix='/api/v1/content')
+    app.register_blueprint(user_profile_bp, url_prefix='/api/v1/users')
+    app.register_blueprint(aura_bp, url_prefix='/api/v1/aura')
+    app.register_blueprint(search_bp, url_prefix='/api/v1/search')
+    app.register_blueprint(social_bp, url_prefix='/api/v1/social')
+    app.register_blueprint(gamification_bp, url_prefix='/api/v1')
     
     return app

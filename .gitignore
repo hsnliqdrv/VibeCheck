@@ -2,5 +2,16 @@
 node_modules
 __pycache__
 .venv
-package-lock.json
 dist
+**/.DS_Store
+
+# Test artifacts
+.pytest_cache/
+test_report*.html
+htmlcov/
+.coverage
+*.log
+
+# Build artifacts
+*.egg-info/
+build/

@@ -44,6 +44,22 @@ export const getLocationDetails = (id) =>
 export const globalSearch = (params) =>
   api.get("/search", { params }).then((r) => r.data);
 
+// User Profile
+export const getUserProfile = () =>
+  api.get("/users/profile").then((r) => r.data);
+export const updateUserProfile = (body) =>
+  api.put("/users/profile", body).then((r) => r.data);
+export const getUserById = (userId) =>
+  api.get(`/users/${userId}`).then((r) => r.data);
+
+// Aura Profile
+export const getAuraProfile = () =>
+  api.get("/aura/profile").then((r) => r.data);
+export const updateAuraProfile = (body) =>
+  api.put("/aura/profile", body).then((r) => r.data);
+export const getUserAura = (userId) =>
+  api.get(`/aura/profile/${userId}`).then((r) => r.data);
+
 // Shares
 export const getMyShares = (params = {}) =>
   api.get("/aura/shares", { params }).then((r) => r.data);
