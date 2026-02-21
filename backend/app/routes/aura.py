@@ -4,6 +4,7 @@ from sqlalchemy import func
 from app.database import get_db
 from app.models.user import User
 from app.models.share import Share
+from app.services.badge_service import BadgeService
 from typing import cast, List, Optional
 
 aura_bp = Blueprint('aura', __name__)
@@ -500,6 +501,13 @@ def create_share():
         db.add(new_share)
         db.commit()
         db.refresh(new_share)
+        
+        # Check and unlock badges
+        try:
+            BadgeService.check_and_unlock_badges(current_user_id)
+        except Exception as badge_error:
+            # Don't fail the request if badge checking fails
+            print(f"Badge unlock error: {badge_error}")
         
         return jsonify(new_share.to_dict()), 201
     
