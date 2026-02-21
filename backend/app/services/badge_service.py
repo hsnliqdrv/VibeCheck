@@ -5,7 +5,7 @@ Handles badge unlock logic and checking when users perform various actions
 from app.database import get_db
 from app.models.gamification import Badge, UserBadge
 from app.models.share import Share
-from app.models.post import Post
+from app.models.post import Post, PostLike
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 from typing import List, Optional, Union, Any
@@ -33,7 +33,9 @@ class BadgeService:
             # Auto-seed badges if none exist
             badge_count = db.query(Badge).count()
             if badge_count == 0:
+                print(f"🌱 Seeding default badges...")
                 BadgeService._seed_default_badges(db)
+                print(f"✓ Badges seeded successfully")
             
             # Get all badges that aren't already unlocked by this user
             unlocked_badge_ids = db.query(UserBadge.badge_id).filter_by(
@@ -43,6 +45,7 @@ class BadgeService:
             
             # Get all available badges
             all_badges = db.query(Badge).all()
+            print(f"Checking {len(all_badges)} badges for user {user_id} (already has {len(unlocked_badge_ids)})")
             
             for badge in all_badges:
                 # Skip if already unlocked
@@ -55,9 +58,11 @@ class BadgeService:
                     user_badge = UserBadge(user_id=user_id, badge_id=badge.id)
                     db.add(user_badge)
                     newly_unlocked.append(badge.id)
+                    print(f"🎉 Unlocked badge: {badge.name} (ID: {badge.id})")
             
             if newly_unlocked:
                 db.commit()
+                print(f"✓ Committed {len(newly_unlocked)} new badges")
             
             return newly_unlocked
         
@@ -92,6 +97,7 @@ class BadgeService:
                 Share.user_id == user_id
             ).scalar()
             
+            print(f"  Badge '{badge.name}': checking shares_count {count} >= {value}")
             return count >= value
         
         # Check shares count by specific category
@@ -121,39 +127,37 @@ class BadgeService:
             category = criteria.get('category')
             value = criteria.get('value', 0)
             
-            # Get user's shares in this category
-            user_shares = db.query(Share.id).filter(
-                Share.user_id == user_id,
-                Share.category == category
+            # Get user's posts in this category
+            user_posts = db.query(Post.id).filter(
+                Post.user_id == user_id,
+                Post.category == category
             ).all()
-            share_ids = [s[0] for s in user_shares]
+            post_ids = [p[0] for p in user_posts]
             
-            if len(share_ids) == 0:
+            if len(post_ids) == 0:
                 return False
             
-            # Count likes on these shares
-            likes_count = db.query(func.count(Post.id)).filter(
-                Post.shared_content_id.in_(share_ids),
-                Post.type == 'like'
+            # Count likes on these posts
+            likes_count = db.query(func.count(PostLike.id)).filter(
+                PostLike.post_id.in_(post_ids)
             ).scalar()
             
             return likes_count >= value
         
-        # Check total likes across all shares
+        # Check total likes across all posts
         elif criteria_type == 'total_likes':
             value = criteria.get('value', 0)
             
-            # Get all user's shares
-            user_shares = db.query(Share.id).filter_by(user_id=user_id).all()
-            share_ids = [s[0] for s in user_shares]
+            # Get all user's posts
+            user_posts = db.query(Post.id).filter_by(user_id=user_id).all()
+            post_ids = [p[0] for p in user_posts]
             
-            if len(share_ids) == 0:
+            if len(post_ids) == 0:
                 return False
             
-            # Count likes on all shares
-            likes_count = db.query(func.count(Post.id)).filter(
-                Post.shared_content_id.in_(share_ids),
-                Post.type == 'like'
+            # Count likes on all posts
+            likes_count = db.query(func.count(PostLike.id)).filter(
+                PostLike.post_id.in_(post_ids)
             ).scalar()
             
             return likes_count >= value
@@ -163,8 +167,7 @@ class BadgeService:
             value = criteria.get('value', 0)
             
             count = db.query(func.count(Post.id)).filter(
-                Post.user_id == user_id,
-                Post.type == 'post'
+                Post.user_id == user_id
             ).scalar()
             
             return count >= value
@@ -357,17 +360,16 @@ class BadgeService:
                 category = criteria.get('category')
                 required = criteria.get('value', 0)
                 
-                user_shares = db.query(Share.id).filter(
-                    Share.user_id == user_id,
-                    Share.category == category
+                user_posts = db.query(Post.id).filter(
+                    Post.user_id == user_id,
+                    Post.category == category
                 ).all()
-                share_ids = [s[0] for s in user_shares]
+                post_ids = [p[0] for p in user_posts]
                 
                 current = 0
-                if len(share_ids) > 0:
-                    current = db.query(func.count(Post.id)).filter(
-                        Post.shared_content_id.in_(share_ids),
-                        Post.type == 'like'
+                if len(post_ids) > 0:
+                    current = db.query(func.count(PostLike.id)).filter(
+                        PostLike.post_id.in_(post_ids)
                     ).scalar()
                 
                 progress_info['current'] = current
@@ -378,14 +380,13 @@ class BadgeService:
             elif criteria_type == 'total_likes':
                 required = criteria.get('value', 0)
                 
-                user_shares = db.query(Share.id).filter_by(user_id=user_id).all()
-                share_ids = [s[0] for s in user_shares]
+                user_posts = db.query(Post.id).filter_by(user_id=user_id).all()
+                post_ids = [p[0] for p in user_posts]
                 
                 current = 0
-                if len(share_ids) > 0:
-                    current = db.query(func.count(Post.id)).filter(
-                        Post.shared_content_id.in_(share_ids),
-                        Post.type == 'like'
+                if len(post_ids) > 0:
+                    current = db.query(func.count(PostLike.id)).filter(
+                        PostLike.post_id.in_(post_ids)
                     ).scalar()
                 
                 progress_info['current'] = current
@@ -397,8 +398,7 @@ class BadgeService:
                 required = criteria.get('value', 0)
                 
                 current = db.query(func.count(Post.id)).filter(
-                    Post.user_id == user_id,
-                    Post.type == 'post'
+                    Post.user_id == user_id
                 ).scalar()
                 
                 progress_info['current'] = current

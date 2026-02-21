@@ -548,10 +548,14 @@ def create_share():
         
         # Check and unlock badges
         try:
-            BadgeService.check_and_unlock_badges(current_user_id)
+            newly_unlocked = BadgeService.check_and_unlock_badges(current_user_id)
+            if newly_unlocked:
+                print(f"✓ Unlocked badges: {newly_unlocked}")
         except Exception as badge_error:
             # Don't fail the request if badge checking fails
-            print(f"Badge unlock error: {badge_error}")
+            print(f"❌ Badge unlock error: {badge_error}")
+            import traceback
+            traceback.print_exc()
         
         return jsonify(new_share.to_dict()), 201
     
