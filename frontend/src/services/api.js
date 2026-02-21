@@ -83,5 +83,6 @@ export const loginUser = (credentials) =>
 export const registerUser = (userData) =>
   api.post("/auth/register", userData).then((r) => r.data);
 export const getCuratorProgress = () =>
-  api.get("/users/curator-progress").then((r) => r.data);
+  axios.get("https://mock.apidog.com/m1/1194510-1189388-default/users/curator-progress")
+    .then((r) => r.data);
 export default api;

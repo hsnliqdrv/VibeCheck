@@ -27,34 +27,32 @@ export default function Profile() {
   const [error, setError] = useState(null);
 
   const [editingProfile, setEditingProfile] = useState(false);
-  const [editingAura, setEditingAura] = useState(false);
   const [profileForm, setProfileForm] = useState({ bio: "", avatar: "" });
-  const [auraForm, setAuraForm] = useState({ aestheticTags: [], auraColors: [] });
-  const [newTag, setNewTag] = useState("");
-  const [newColor, setNewColor] = useState("#FF6B9D");
 
   useEffect(() => {
     const loadData = async () => {
       try {
         setLoading(true);
-        const [userRes, auraRes, curatorRes] = await Promise.all([
+        // Используем Promise.allSettled вместо Promise.all
+        // Это позволит профилю загрузиться, даже если один из запросов (например, мок) упадет
+        const results = await Promise.allSettled([
           getUserProfile(),
           getAuraProfile(),
           getCuratorProgress(),
         ]);
         
-        setUserProfile(userRes);
-        setAuraProfile(auraRes);
-        setCuratorData(curatorRes);
+        if (results[0].status === 'fulfilled') {
+          setUserProfile(results[0].value);
+          setProfileForm({ bio: results[0].value.bio || "", avatar: results[0].value.avatar || "" });
+        }
+        
+        if (results[1].status === 'fulfilled') setAuraProfile(results[1].value);
+        if (results[2].status === 'fulfilled') setCuratorData(results[2].value);
 
-        setProfileForm({ bio: userRes.bio || "", avatar: userRes.avatar || "" });
-        setAuraForm({
-          aestheticTags: auraRes.aestheticTags || [],
-          auraColors: auraRes.auraColors || [],
-        });
         setError(null);
       } catch (err) {
-        setError(err.response?.data?.message || "Failed to load profile");
+        console.error("Load error:", err);
+        setError("Failed to load some profile data");
         if (err.response?.status === 401) navigate("/");
       } finally {
         setLoading(false);
@@ -68,14 +66,17 @@ export default function Profile() {
   return (
     <div className="profile-container">
       {error && <div className="error-message">{error}</div>}
+      
       <section className="profile-section">
         <div className="section-header">
-          <h2>Profile</h2>
+          <h2>Profile: {userProfile?.username}</h2>
           <button className="edit-btn" onClick={() => setEditingProfile(!editingProfile)}>
             {editingProfile ? "Cancel" : "Edit"}
           </button>
         </div>
       </section>
+
+      {/* Безопасная отрисовка куратора */}
       {curatorData && (
         <section className="curator-section">
           <div className="curator-card">
@@ -84,21 +85,24 @@ export default function Profile() {
                 <h3>Curator Status</h3>
                 <p className="curator-subtitle">Your journey to legendary taste</p>
               </div>
-              <div className="curator-level-badge">{curatorData.level}</div>
+              {/* Используем ?. везде */}
+              <div className="curator-level-badge">{curatorData?.level || 0}</div>
             </div>
 
             <div className="curator-status-row">
-              <span className="curator-role">{curatorData.roleName}</span>
-              <span className="curator-xp">{curatorData.currentXP} XP</span>
+              <span className="curator-role">{curatorData?.roleName || "Explorer"}</span>
+              <span className="curator-xp">{curatorData?.currentXP || 0} XP</span>
             </div>
 
             <div className="xp-progress-container">
               <div 
                 className="xp-progress-fill" 
-                style={{ width: `${(curatorData.currentXP / curatorData.nextLevelXP) * 100}%` }}
+                style={{ 
+                  width: `${(curatorData?.currentXP / (curatorData?.nextLevelXP || 100)) * 100}%` 
+                }}
               ></div>
               <span className="xp-needed-text">
-                {curatorData.nextLevelXP - curatorData.currentXP} XP needed to Level {curatorData.level + 1}
+                {(curatorData?.nextLevelXP || 0) - (curatorData?.currentXP || 0)} XP needed to Level {(curatorData?.level || 0) + 1}
               </span>
             </div>
 
@@ -106,28 +110,29 @@ export default function Profile() {
               <div className="c-stat-item">
                 <div className="c-icon-box blue"><Star size={18} /></div>
                 <div className="c-stat-info">
-                  <span className="c-val">{curatorData.stats.totalShares}</span>
+                  {/* САМОЕ ВАЖНОЕ МЕСТО: curatorData?.stats?.totalShares */}
+                  <span className="c-val">{curatorData?.stats?.totalShares ?? 0}</span>
                   <span className="c-lab">Total Shares</span>
                 </div>
               </div>
               <div className="c-stat-item">
                 <div className="c-icon-box orange"><Flame size={18} /></div>
                 <div className="c-stat-info">
-                  <span className="c-val">{curatorData.stats.dayStreak}</span>
+                  <span className="c-val">{curatorData?.stats?.dayStreak ?? 0}</span>
                   <span className="c-lab">Day Streak</span>
                 </div>
               </div>
               <div className="c-stat-item">
                 <div className="c-icon-box purple"><Trophy size={18} /></div>
                 <div className="c-stat-info">
-                  <span className="c-val">{curatorData.stats.badges}</span>
+                  <span className="c-val">{curatorData?.stats?.badges ?? 0}</span>
                   <span className="c-lab">Badges</span>
                 </div>
               </div>
               <div className="c-stat-item">
                 <div className="c-icon-box green"><TrendingUp size={18} /></div>
                 <div className="c-stat-info">
-                  <span className="c-val">{curatorData.stats.earlyFinds}</span>
+                  <span className="c-val">{curatorData?.stats?.earlyFinds ?? 0}</span>
                   <span className="c-lab">Early Finds</span>
                 </div>
               </div>
@@ -135,10 +140,6 @@ export default function Profile() {
           </div>
         </section>
       )}
-      <section className="profile-section">
-      </section>
-      <section className="profile-section">
-      </section>
     </div>
   );
 }
