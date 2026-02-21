@@ -6,6 +6,7 @@ from app.database import get_db
 from app.models.gamification import Badge, UserBadge
 from app.models.share import Share
 from app.models.post import Post, PostLike
+from app.seed_gamification import seed_badges, seed_curator_levels
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 from typing import List, Optional, Union, Any
@@ -33,9 +34,10 @@ class BadgeService:
             # Auto-seed badges if none exist
             badge_count = db.query(Badge).count()
             if badge_count == 0:
-                print(f"🌱 Seeding default badges...")
-                BadgeService._seed_default_badges(db)
-                print(f"✓ Badges seeded successfully")
+                print(f"🌱 [BadgeService] Auto-seeding default badges...")
+                seed_badges(db)
+                seed_curator_levels(db)
+                print(f"✓ [BadgeService] Badges seeded successfully (count: {db.query(Badge).count()})")
             
             # Get all badges that aren't already unlocked by this user
             unlocked_badge_ids = db.query(UserBadge.badge_id).filter_by(
@@ -422,152 +424,3 @@ class BadgeService:
         
         except:
             return None
-    
-    @staticmethod
-    def _seed_default_badges(db):
-        """Seed default badges if database is empty"""
-        badges_data = [
-            # Early badges
-            {
-                'name': 'First Steps',
-                'description': 'Created your first share',
-                'icon': '/badges/first_steps.png',
-                'rarity': 'common',
-                'category': 'early',
-                'unlock_criteria': {'type': 'shares_count', 'value': 1}
-            },
-            {
-                'name': 'Getting Started',
-                'description': 'Created 5 shares',
-                'icon': '/badges/getting_started.png',
-                'rarity': 'common',
-                'category': 'early',
-                'unlock_criteria': {'type': 'shares_count', 'value': 5}
-            },
-            {
-                'name': 'Early Adopter',
-                'description': 'One of the first to join VibeCheck',
-                'icon': '/badges/early_adopter.png',
-                'rarity': 'rare',
-                'category': 'early',
-                'unlock_criteria': {'type': 'early_user', 'value': 1000}
-            },
-            
-            # Completionist badges
-            {
-                'name': 'Diverse Curator',
-                'description': 'Shared content from all 5 categories',
-                'icon': '/badges/diverse_curator.png',
-                'rarity': 'rare',
-                'category': 'completionist',
-                'unlock_criteria': {'type': 'all_categories', 'value': 5}
-            },
-            {
-                'name': 'Cinephile',
-                'description': 'Shared 25 movies',
-                'icon': '/badges/cinephile.png',
-                'rarity': 'epic',
-                'category': 'completionist',
-                'unlock_criteria': {'type': 'shares_count', 'category': 'cinema', 'value': 25}
-            },
-            {
-                'name': 'Audiophile',
-                'description': 'Shared 25 albums',
-                'icon': '/badges/audiophile.png',
-                'rarity': 'epic',
-                'category': 'completionist',
-                'unlock_criteria': {'type': 'shares_count', 'category': 'music', 'value': 25}
-            },
-            {
-                'name': 'Gaming Legend',
-                'description': 'Shared 25 games',
-                'icon': '/badges/gaming_legend.png',
-                'rarity': 'epic',
-                'category': 'completionist',
-                'unlock_criteria': {'type': 'shares_count', 'category': 'games', 'value': 25}
-            },
-            {
-                'name': 'Bookworm',
-                'description': 'Shared 25 books',
-                'icon': '/badges/bookworm.png',
-                'rarity': 'epic',
-                'category': 'completionist',
-                'unlock_criteria': {'type': 'shares_count', 'category': 'books', 'value': 25}
-            },
-            {
-                'name': 'World Explorer',
-                'description': 'Shared 25 locations',
-                'icon': '/badges/world_explorer.png',
-                'rarity': 'epic',
-                'category': 'completionist',
-                'unlock_criteria': {'type': 'shares_count', 'category': 'travel', 'value': 25}
-            },
-            {
-                'name': 'Ultimate Collector',
-                'description': 'Shared 100 items total',
-                'icon': '/badges/ultimate_collector.png',
-                'rarity': 'legendary',
-                'category': 'completionist',
-                'unlock_criteria': {'type': 'shares_count', 'value': 100}
-            },
-            
-            # Social badges
-            {
-                'name': 'Social Butterfly',
-                'description': 'Created your first post',
-                'icon': '/badges/social_butterfly.png',
-                'rarity': 'common',
-                'category': 'social',
-                'unlock_criteria': {'type': 'posts_count', 'value': 1}
-            },
-            {
-                'name': 'Conversationalist',
-                'description': 'Made 10 posts',
-                'icon': '/badges/conversationalist.png',
-                'rarity': 'rare',
-                'category': 'social',
-                'unlock_criteria': {'type': 'posts_count', 'value': 10}
-            },
-            {
-                'name': 'Community Favorite',
-                'description': 'Earned 50 total likes',
-                'icon': '/badges/community_favorite.png',
-                'rarity': 'epic',
-                'category': 'social',
-                'unlock_criteria': {'type': 'total_likes', 'value': 50}
-            },
-            
-            # Streak badges
-            {
-                'name': 'Consistent Creator',
-                'description': 'Maintained a 7-day streak',
-                'icon': '/badges/consistent_creator.png',
-                'rarity': 'rare',
-                'category': 'streak',
-                'unlock_criteria': {'type': 'streak_days', 'value': 7}
-            },
-            {
-                'name': 'Dedication Master',
-                'description': 'Maintained a 30-day streak',
-                'icon': '/badges/dedication_master.png',
-                'rarity': 'epic',
-                'category': 'streak',
-                'unlock_criteria': {'type': 'streak_days', 'value': 30}
-            },
-            
-            # Special badges
-            {
-                'name': 'Curator Elite',
-                'description': 'Reached Level 5',
-                'icon': '/badges/curator_elite.png',
-                'rarity': 'legendary',
-                'category': 'special',
-                'unlock_criteria': {'type': 'curator_level', 'value': 5}
-            },
-        ]
-        
-        for badge_data in badges_data:
-            badge = Badge(**badge_data)
-            db.add(badge)
-        
-        db.commit()
