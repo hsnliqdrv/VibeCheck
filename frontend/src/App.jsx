@@ -38,29 +38,44 @@ function AppShell() {
   };
 
   return (
-    <Router>
-      <div className="app">
-        <nav className="app-nav">
-          <div className="brand">
-            <span className="brand-mark">VC</span>
-            <div>
-              <p className="brand-name">VibeCheck</p>
-              <p className="brand-tag">Aesthetic Social Companion</p>
-            </div>
+    <div className="app">
+      <nav className="app-nav">
+        <div className="brand">
+          <span className="brand-mark">VC</span>
+          <div>
+            <p className="brand-name">VibeCheck</p>
+            <p className="brand-tag">Aesthetic Social Companion</p>
           </div>
-          <div className="nav-links">
-            <Link to="/">Login</Link>
-            <Link to="/register">Register</Link>
-            <Link to="/stories">Stories</Link>
-          </div>
-        </nav>
+        </div>
+        <div className="nav-links">
+          {!isAuthed && <Link to="/">Login</Link>}
+          {!isAuthed && <Link to="/register">Register</Link>}
+          {isAuthed && <Link to="/stories">Stories</Link>}
+          {isAuthed && <Link to="/badges">Badges</Link>}
+          {isAuthed && <Link to="/profile">Profile</Link>}
+          {isAuthed && (
+            <button type="button" className="nav-link-button" onClick={handleLogout}>
+              Logout
+            </button>
+          )}
+        </div>
+      </nav>
 
-        <Routes>
-          <Route path="/" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/stories" element={<StoryGenerator />} />
-        </Routes>
-      </div>
+      <Routes>
+        <Route path="/" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/stories" element={<StoryGenerator />} />
+        <Route path="/badges" element={<BadgesPage />} />
+        <Route path="/profile" element={<Profile />} />
+      </Routes>
+    </div>
+  );
+}
+
+export default function App() {
+  return (
+    <Router>
+      <AppShell />
     </Router>
   );
 }
