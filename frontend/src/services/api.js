@@ -59,6 +59,10 @@ export const updateAuraProfile = (body) =>
 export const getUserAura = (userId) =>
   api.get(`/aura/profile/${userId}`).then((r) => r.data);
 
+// Curator Stats
+export const getCuratorStats = () =>
+  api.get("/curator/stats").then((r) => r.data);
+
 // Shares
 export const getMyShares = (params = {}) =>
   api.get("/aura/shares", { params }).then((r) => r.data);
