@@ -1,6 +1,7 @@
 import axios from "axios";
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL;
+// Default to the Apidog mock server for development when VITE_API_BASE_URL isn't set
+const API_BASE = import.meta.env.VITE_API_BASE_URL || "https://mock.apidog.com/m1/1194510-1189388-1080556";
 
 const api = axios.create({
   baseURL: API_BASE,
@@ -64,6 +65,14 @@ export const getMyShares = (params = {}) =>
   api.get("/aura/shares", { params }).then((r) => r.data);
 export const createShare = (body) =>
   api.post("/aura/shares", body).then((r) => r.data);
+
+// Badges (OpenAPI: /badges, /badges/user)
+export const getAllBadges = (params = {}) =>
+  api.get("/badges", { params }).then((r) => r.data);
+export const getUserBadges = (params = {}) =>
+  api.get("/badges/user", { params }).then((r) => r.data);
+export const getUserBadgesById = (userId) =>
+  api.get(`/badges/user/${userId}`).then((r) => r.data);
 
 const CATEGORY_FETCHERS = {
   cinema: getMovies,
