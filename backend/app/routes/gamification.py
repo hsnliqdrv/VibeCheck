@@ -406,11 +406,20 @@ def get_curator_stats():
             db.add(stats)
             db.commit()
         
-        # Return only the required fields as per OpenAPI spec
+        # Fetch user's badges for the badges array
+        user_badges = db.query(UserBadge).filter_by(user_id=user_id).all()
+        badges_list = [ub.badge.to_dict(user_badge=ub) for ub in user_badges]
+        
+        # Return UserStats schema as per OpenAPI spec
         return jsonify({
             'totalShares': stats.total_shares,
             'totalXP': stats.total_xp,
-            'currentLevel': stats.current_level
+            'currentLevel': stats.current_level,
+            'streakDays': stats.streak_days,
+            'badges': badges_list,
+            'completedFilmographies': [],  # TODO: Implement filmography tracking
+            'finishedBooks': stats.finished_books,
+            'earlyDiscoveries': stats.early_discoveries
         }), 200
     
     except Exception as e:
@@ -489,11 +498,20 @@ def get_curator_stats_by_id(user_id):
             db.add(stats)
             db.commit()
         
-        # Return only the required fields as per OpenAPI spec
+        # Fetch user's badges for the badges array
+        user_badges = db.query(UserBadge).filter_by(user_id=user_id).all()
+        badges_list = [ub.badge.to_dict(user_badge=ub) for ub in user_badges]
+        
+        # Return UserStats schema as per OpenAPI spec
         return jsonify({
             'totalShares': stats.total_shares,
             'totalXP': stats.total_xp,
-            'currentLevel': stats.current_level
+            'currentLevel': stats.current_level,
+            'streakDays': stats.streak_days,
+            'badges': badges_list,
+            'completedFilmographies': [],  # TODO: Implement filmography tracking
+            'finishedBooks': stats.finished_books,
+            'earlyDiscoveries': stats.early_discoveries
         }), 200
     
     except Exception as e:
@@ -582,10 +600,8 @@ def get_curator_levels():
             db.commit()
             levels = db.query(CuratorLevel).order_by(CuratorLevel.level).all()
         
-        return jsonify({
-            'levels': [level.to_dict() for level in levels],
-            'total': len(levels)
-        }), 200
+        # Return array of CuratorLevel objects directly as per OpenAPI spec
+        return jsonify([level.to_dict() for level in levels]), 200
     
     except Exception as e:
         return jsonify({
