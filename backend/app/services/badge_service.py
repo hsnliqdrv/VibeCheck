@@ -79,8 +79,18 @@ class BadgeService:
         criteria = badge.unlock_criteria
         criteria_type = criteria.get('type')
         
-        # Check shares count by category
-        if criteria_type == 'shares_count':
+        # Check total shares count (all categories)
+        if criteria_type == 'shares_count' and 'category' not in criteria:
+            value = criteria.get('value', 0)
+            
+            count = db.query(func.count(Share.id)).filter(
+                Share.user_id == user_id
+            ).scalar()
+            
+            return count >= value
+        
+        # Check shares count by specific category
+        elif criteria_type == 'shares_count' and 'category' in criteria:
             category = criteria.get('category')
             value = criteria.get('value', 0)
             
@@ -90,6 +100,16 @@ class BadgeService:
             ).scalar()
             
             return count >= value
+        
+        # Check if user has shared from all categories
+        elif criteria_type == 'all_categories':
+            required_count = criteria.get('value', 5)
+            
+            distinct_categories = db.query(func.count(func.distinct(Share.category))).filter(
+                Share.user_id == user_id
+            ).scalar()
+            
+            return distinct_categories >= required_count
         
         # Check likes on category shares
         elif criteria_type == 'likes_on_category':
@@ -144,21 +164,69 @@ class BadgeService:
             
             return count >= value
         
+        # Check streak days
+        elif criteria_type == 'streak_days':
+            value = criteria.get('value', 0)
+            
+            try:
+                from app.models.gamification import UserCuratorStats
+                stats = db.query(UserCuratorStats).filter_by(user_id=user_id).first()
+                if stats is None:
+                    return False
+                
+                return stats.streak_days >= value
+            except (AttributeError, Exception):
+                return False
+        
         # Check curator level reached
         elif criteria_type == 'curator_level':
             value = criteria.get('value', 1)
             
+            try:
+                from app.models.gamification import UserCuratorStats
+                stats = db.query(UserCuratorStats).filter_by(user_id=user_id).first()
+                if stats is None:
+                    return False
+                
+                return stats.current_level >= value
+            except (AttributeError, Exception):
+                return False
+        
+        # Check early user (for special early adopter badge)
+        elif criteria_type == 'early_user':
+            # Check if user_id is among first N users
+            value = criteria.get('value', 1000)
+            
+            try:
+                from app.models.user import User
+                # Count users created before this user
+                user = db.query(User).filter_by(user_id=user_id).first()
+                if user is None:
+                    return False
+                
+                earlier_users = db.query(func.count(User.user_id)).filter(
+                    User.created_at < user.created_at
+                ).scalar()
+                
+                return earlier_users < value
+            except (AttributeError, Exception):
+                return False
+        
+        # Check aura profile completion
+        elif criteria_type == 'aura_complete':
             try:
                 from app.models.user import User
                 user = db.query(User).filter_by(user_id=user_id).first()
                 if user is None:
                     return False
                 
-                curator_stats = getattr(user, 'curator_stats', None)
-                if curator_stats is None:
-                    return False
+                # Check if user has aesthetic tags and aura colors set
+                has_tags = user.aesthetic_tags and len(user.aesthetic_tags) >= 3
+                has_colors = user.aura_colors and len(user.aura_colors) >= 2
+                has_bio = user.bio and len(user.bio) > 20
+                has_avatar = user.avatar is not None
                 
-                return curator_stats.current_level >= value
+                return has_tags and has_colors and has_bio and has_avatar
             except (AttributeError, Exception):
                 return False
         
@@ -181,8 +249,8 @@ class BadgeService:
         
         result = []
         for user_badge in user_badges:
-            badge_data = user_badge.badge.to_dict()
-            badge_data['earnedAt'] = user_badge.earned_at.isoformat()
+            # Pass user_badge to to_dict for proper formatting
+            badge_data = user_badge.badge.to_dict(user_badge=user_badge)
             result.append(badge_data)
         
         return result

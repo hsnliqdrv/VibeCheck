@@ -219,21 +219,13 @@ def get_user_badges():
         total_count = query.count()
         user_badges = query.offset(offset).limit(limit).all()
         
-        # Count unlocked badges (user_id has earned badges)
-        unlocked_count = db.query(UserBadge).filter_by(user_id=user_id).count()
-        
-        # Format response with combined badge info
+        # Format response - Return array of badges directly per OpenAPI spec
         badges_list = []
         for user_badge in user_badges:
-            badge_dict = user_badge.badge.to_dict()
-            badge_dict['earnedAt'] = user_badge.earned_at.isoformat()
+            badge_dict = user_badge.badge.to_dict(user_badge=user_badge)
             badges_list.append(badge_dict)
         
-        return jsonify({
-            'badges': badges_list,
-            'unlockedCount': unlocked_count,
-            'totalCount': total_count
-        }), 200
+        return jsonify(badges_list), 200
     
     except Exception as e:
         return jsonify({
@@ -310,21 +302,13 @@ def get_user_badges_by_id(user_id):
         total_count = query.count()
         user_badges = query.offset(offset).limit(limit).all()
         
-        # Count unlocked badges
-        unlocked_count = db.query(UserBadge).filter_by(user_id=user_id).count()
-        
-        # Format response
+        # Format response - Return array of badges directly per OpenAPI spec
         badges_list = []
         for user_badge in user_badges:
-            badge_dict = user_badge.badge.to_dict()
-            badge_dict['earnedAt'] = user_badge.earned_at.isoformat()
+            badge_dict = user_badge.badge.to_dict(user_badge=user_badge)
             badges_list.append(badge_dict)
         
-        return jsonify({
-            'badges': badges_list,
-            'unlockedCount': unlocked_count,
-            'totalCount': total_count
-        }), 200
+        return jsonify(badges_list), 200
     
     except Exception as e:
         return jsonify({

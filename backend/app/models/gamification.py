@@ -13,11 +13,11 @@ class Badge(Base):
     id = Column(String, primary_key=True, default=lambda: f"b_{uuid.uuid4().hex[:12]}")
     name = Column(String(100), nullable=False, unique=True, index=True)
     description = Column(String(500), nullable=False)
-    image = Column(Text, nullable=False)  # URI to badge image
+    icon = Column(Text, nullable=False)  # URI to badge icon (renamed from image)
     
     # Badge classification
-    rarity = Column(String(20), nullable=False, index=True)  # common, uncommon, rare, legendary
-    category = Column(String(50), nullable=False, index=True)  # cinema, music, games, books, travel, curator, social
+    rarity = Column(String(20), nullable=False, index=True)  # common, rare, epic, legendary
+    category = Column(String(50), nullable=False, index=True)  # early, completionist, social, streak, special
     
     # Badge unlock criteria
     unlock_criteria = Column(JSON, nullable=True)  # {type: "shares_count", value: 10}
@@ -28,17 +28,34 @@ class Badge(Base):
     # Relationships
     user_badges = relationship('UserBadge', back_populates='badge', cascade='all, delete-orphan')
     
-    def to_dict(self):
-        """Convert badge to dictionary"""
-        return {
+    def to_dict(self, user_badge=None):
+        """Convert badge to dictionary matching OpenAPI Badge schema
+        
+        Args:
+            user_badge: Optional UserBadge instance to include unlock info
+        """
+        result = {
             'id': self.id,
             'name': self.name,
             'description': self.description,
-            'image': self.image,
+            'icon': self.icon,
             'rarity': self.rarity,
-            'category': self.category,
-            'unlockedCount': len(self.user_badges)
+            'category': self.category
         }
+        
+        # Add user-specific fields if UserBadge provided
+        if user_badge:
+            result['unlocked'] = True
+            result['unlockedDate'] = user_badge.earned_at.isoformat()
+            result['progress'] = user_badge.progress if hasattr(user_badge, 'progress') else None
+            result['maxProgress'] = user_badge.max_progress if hasattr(user_badge, 'max_progress') else None
+        else:
+            result['unlocked'] = False
+            result['unlockedDate'] = None
+            result['progress'] = None
+            result['maxProgress'] = None
+        
+        return result
     
     def __repr__(self):
         return f'<Badge {self.name}>'
@@ -55,6 +72,10 @@ class UserBadge(Base):
     # When user earned the badge
     earned_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     
+    # Progress tracking (optional, for display)
+    progress = Column(Integer, nullable=True)
+    max_progress = Column(Integer, nullable=True)
+    
     # Relationships
     user = relationship('User', backref='earned_badges')
     badge = relationship('Badge', back_populates='user_badges')
@@ -67,7 +88,7 @@ class UserBadge(Base):
         }
         
         if include_badge and self.badge:
-            result['badge'] = self.badge.to_dict()
+            result['badge'] = self.badge.to_dict(user_badge=self)
         
         return result
     
@@ -133,6 +154,12 @@ class UserCuratorStats(Base):
     following_count = Column(Integer, default=0, nullable=False)
     rooms_joined = Column(Integer, default=0, nullable=False)
     
+    # Additional stats for OpenAPI UserStats schema
+    streak_days = Column(Integer, default=0, nullable=False)
+    completed_filmographies = Column(Integer, default=0, nullable=False)
+    finished_books = Column(Integer, default=0, nullable=False)
+    early_discoveries = Column(Integer, default=0, nullable=False)
+    
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
     
@@ -150,6 +177,10 @@ class UserCuratorStats(Base):
             'totalPosts': self.total_posts,
             'totalLikesReceived': self.total_likes_received,
             'totalCommentsReceived': self.total_comments_received,
+            'streakDays': self.streak_days,
+            'completedFilmographies': self.completed_filmographies,
+            'finishedBooks': self.finished_books,
+            'earlyDiscoveries': self.early_discoveries,
             'contentDistribution': {
                 'movies': self.movies_count,
                 'albums': self.albums_count,
