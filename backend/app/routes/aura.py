@@ -4,6 +4,7 @@ from sqlalchemy import func
 from app.database import get_db
 from app.models.user import User
 from app.models.share import Share
+from app.models.gamification import UserCuratorStats
 from app.services.badge_service import BadgeService
 from typing import cast, List, Optional
 
@@ -501,6 +502,49 @@ def create_share():
         db.add(new_share)
         db.commit()
         db.refresh(new_share)
+        
+        # Update user curator stats
+        try:
+            stats = db.query(UserCuratorStats).filter_by(user_id=current_user_id).first()
+            if not stats:
+                # Create new stats if they don't exist
+                stats = UserCuratorStats(user_id=current_user_id)
+                db.add(stats)
+            
+            # Increment total shares
+            stats.total_shares += 1  # type: ignore
+            
+            # Increment category-specific count
+            category = data['category']
+            if category == 'cinema':
+                stats.movies_count += 1  # type: ignore
+            elif category == 'music':
+                stats.albums_count += 1  # type: ignore
+            elif category == 'games':
+                stats.games_count += 1  # type: ignore
+            elif category == 'books':
+                stats.books_count += 1  # type: ignore
+            elif category == 'travel':
+                stats.locations_count += 1  # type: ignore
+            
+            # Award XP for sharing (e.g., 10 XP per share)
+            stats.total_xp += 10  # type: ignore
+            stats.current_xp += 10  # type: ignore
+            
+            # Check for level up
+            from app.models.gamification import CuratorLevel
+            next_level = db.query(CuratorLevel).filter(
+                CuratorLevel.level == stats.current_level + 1
+            ).first()
+            
+            if next_level is not None and stats.total_xp >= next_level.xp_required:  # type: ignore
+                stats.current_level = next_level.level  # type: ignore
+                stats.current_xp = stats.total_xp - next_level.xp_required  # type: ignore
+            
+            db.commit()
+        except Exception as stats_error:
+            # Don't fail the request if stats update fails
+            print(f"Stats update error: {stats_error}")
         
         # Check and unlock badges
         try:

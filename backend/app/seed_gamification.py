@@ -16,187 +16,178 @@ from app.models.gamification import Badge, CuratorLevel
 def seed_badges(db):
     """Create sample badges in the database"""
     
+    # OpenAPI spec: rarity [common, rare, epic, legendary]
+    # OpenAPI spec: category [early, completionist, social, streak, special]
+    
     badges_data = [
-        # Cinema badges
+        # Early badges - for starting activities
         {
-            'name': 'Cinephile',
-            'description': 'Shared your first movie',
-            'image': '/badges/cinephile.png',
+            'name': 'First Steps',
+            'description': 'Created your first share',
+            'icon': '/badges/first_steps.png',
             'rarity': 'common',
-            'category': 'cinema',
-            'unlock_criteria': {'type': 'shares_count', 'category': 'cinema', 'value': 1}
+            'category': 'early',
+            'unlock_criteria': {'type': 'shares_count', 'value': 1}
         },
         {
-            'name': 'Film Buff',
-            'description': 'Shared 10 movies',
-            'image': '/badges/film_buff.png',
-            'rarity': 'uncommon',
-            'category': 'cinema',
-            'unlock_criteria': {'type': 'shares_count', 'category': 'cinema', 'value': 10}
+            'name': 'Getting Started',
+            'description': 'Created 5 shares',
+            'icon': '/badges/getting_started.png',
+            'rarity': 'common',
+            'category': 'early',
+            'unlock_criteria': {'type': 'shares_count', 'value': 5}
         },
         {
-            'name': 'Director\'s Favorite',
-            'description': 'Earned 50 likes on movie shares',
-            'image': '/badges/directors_favorite.png',
+            'name': 'Early Adopter',
+            'description': 'One of the first to join VibeCheck',
+            'icon': '/badges/early_adopter.png',
             'rarity': 'rare',
-            'category': 'cinema',
-            'unlock_criteria': {'type': 'likes_on_category', 'category': 'cinema', 'value': 50}
+            'category': 'early',
+            'unlock_criteria': {'type': 'early_user', 'value': 1000}
         },
         
-        # Music badges
+        # Completionist badges - for completing collections
         {
-            'name': 'Melody Lover',
-            'description': 'Shared your first album',
-            'image': '/badges/melody_lover.png',
-            'rarity': 'common',
-            'category': 'music',
-            'unlock_criteria': {'type': 'shares_count', 'category': 'music', 'value': 1}
+            'name': 'Diverse Curator',
+            'description': 'Shared content from all 5 categories',
+            'icon': '/badges/diverse_curator.png',
+            'rarity': 'rare',
+            'category': 'completionist',
+            'unlock_criteria': {'type': 'all_categories', 'value': 5}
+        },
+        {
+            'name': 'Cinephile',
+            'description': 'Shared 25 movies',
+            'icon': '/badges/cinephile.png',
+            'rarity': 'epic',
+            'category': 'completionist',
+            'unlock_criteria': {'type': 'shares_count', 'category': 'cinema', 'value': 25}
         },
         {
             'name': 'Audiophile',
-            'description': 'Shared 10 albums',
-            'image': '/badges/audiophile.png',
-            'rarity': 'uncommon',
-            'category': 'music',
-            'unlock_criteria': {'type': 'shares_count', 'category': 'music', 'value': 10}
+            'description': 'Shared 25 albums',
+            'icon': '/badges/audiophile.png',
+            'rarity': 'epic',
+            'category': 'completionist',
+            'unlock_criteria': {'type': 'shares_count', 'category': 'music', 'value': 25}
         },
         {
-            'name': 'Music Curator',
-            'description': 'Earned 50 likes on music shares',
-            'image': '/badges/music_curator.png',
-            'rarity': 'rare',
-            'category': 'music',
-            'unlock_criteria': {'type': 'likes_on_category', 'category': 'music', 'value': 50}
+            'name': 'Gaming Legend',
+            'description': 'Shared 25 games',
+            'icon': '/badges/gaming_legend.png',
+            'rarity': 'epic',
+            'category': 'completionist',
+            'unlock_criteria': {'type': 'shares_count', 'category': 'games', 'value': 25}
         },
-        
-        # Games badges
-        {
-            'name': 'Game Enthusiast',
-            'description': 'Shared your first game',
-            'image': '/badges/game_enthusiast.png',
-            'rarity': 'common',
-            'category': 'games',
-            'unlock_criteria': {'type': 'shares_count', 'category': 'games', 'value': 1}
-        },
-        {
-            'name': 'Gamer',
-            'description': 'Shared 10 games',
-            'image': '/badges/gamer.png',
-            'rarity': 'uncommon',
-            'category': 'games',
-            'unlock_criteria': {'type': 'shares_count', 'category': 'games', 'value': 10}
-        },
-        {
-            'name': 'Gaming Expert',
-            'description': 'Earned 75 likes on game shares',
-            'image': '/badges/gaming_expert.png',
-            'rarity': 'legendary',
-            'category': 'games',
-            'unlock_criteria': {'type': 'likes_on_category', 'category': 'games', 'value': 75}
-        },
-        
-        # Books badges
         {
             'name': 'Bookworm',
-            'description': 'Shared your first book',
-            'image': '/badges/bookworm.png',
-            'rarity': 'common',
-            'category': 'books',
-            'unlock_criteria': {'type': 'shares_count', 'category': 'books', 'value': 1}
+            'description': 'Shared 25 books',
+            'icon': '/badges/bookworm.png',
+            'rarity': 'epic',
+            'category': 'completionist',
+            'unlock_criteria': {'type': 'shares_count', 'category': 'books', 'value': 25}
         },
         {
-            'name': 'Reader',
-            'description': 'Shared 10 books',
-            'image': '/badges/reader.png',
-            'rarity': 'uncommon',
-            'category': 'books',
-            'unlock_criteria': {'type': 'shares_count', 'category': 'books', 'value': 10}
+            'name': 'World Explorer',
+            'description': 'Shared 25 locations',
+            'icon': '/badges/world_explorer.png',
+            'rarity': 'epic',
+            'category': 'completionist',
+            'unlock_criteria': {'type': 'shares_count', 'category': 'travel', 'value': 25}
         },
         {
-            'name': 'Literary Critic',
-            'description': 'Earned 60 likes on book shares',
-            'image': '/badges/literary_critic.png',
-            'rarity': 'rare',
-            'category': 'books',
-            'unlock_criteria': {'type': 'likes_on_category', 'category': 'books', 'value': 60}
-        },
-        
-        # Travel badges
-        {
-            'name': 'Explorer',
-            'description': 'Shared your first travel destination',
-            'image': '/badges/explorer.png',
-            'rarity': 'common',
-            'category': 'travel',
-            'unlock_criteria': {'type': 'shares_count', 'category': 'travel', 'value': 1}
-        },
-        {
-            'name': 'Wanderer',
-            'description': 'Shared 10 travel destinations',
-            'image': '/badges/wanderer.png',
-            'rarity': 'uncommon',
-            'category': 'travel',
-            'unlock_criteria': {'type': 'shares_count', 'category': 'travel', 'value': 10}
-        },
-        {
-            'name': 'World Traveler',
-            'description': 'Earned 100 likes on travel shares',
-            'image': '/badges/world_traveler.png',
+            'name': 'Ultimate Collector',
+            'description': 'Shared 100 items total',
+            'icon': '/badges/ultimate_collector.png',
             'rarity': 'legendary',
-            'category': 'travel',
-            'unlock_criteria': {'type': 'likes_on_category', 'category': 'travel', 'value': 100}
+            'category': 'completionist',
+            'unlock_criteria': {'type': 'shares_count', 'value': 100}
         },
         
-        # Curator badges
-        {
-            'name': 'Rising Curator',
-            'description': 'Reached curator level 2',
-            'image': '/badges/rising_curator.png',
-            'rarity': 'uncommon',
-            'category': 'curator',
-            'unlock_criteria': {'type': 'curator_level', 'value': 2}
-        },
-        {
-            'name': 'Established Curator',
-            'description': 'Reached curator level 5',
-            'image': '/badges/established_curator.png',
-            'rarity': 'rare',
-            'category': 'curator',
-            'unlock_criteria': {'type': 'curator_level', 'value': 5}
-        },
-        {
-            'name': 'Master Curator',
-            'description': 'Reached curator level 10',
-            'image': '/badges/master_curator.png',
-            'rarity': 'legendary',
-            'category': 'curator',
-            'unlock_criteria': {'type': 'curator_level', 'value': 10}
-        },
-        
-        # Social badges
+        # Social badges - for community engagement
         {
             'name': 'Social Butterfly',
             'description': 'Created your first post',
-            'image': '/badges/social_butterfly.png',
+            'icon': '/badges/social_butterfly.png',
             'rarity': 'common',
             'category': 'social',
             'unlock_criteria': {'type': 'posts_count', 'value': 1}
         },
         {
-            'name': 'Community Member',
+            'name': 'Conversationalist',
+            'description': 'Made 10 posts',
+            'icon': '/badges/conversationalist.png',
+            'rarity': 'rare',
+            'category': 'social',
+            'unlock_criteria': {'type': 'posts_count', 'value': 10}
+        },
+        {
+            'name': 'Community Favorite',
             'description': 'Earned 50 total likes',
-            'image': '/badges/community_member.png',
-            'rarity': 'uncommon',
+            'icon': '/badges/community_favorite.png',
+            'rarity': 'epic',
             'category': 'social',
             'unlock_criteria': {'type': 'total_likes', 'value': 50}
         },
         {
             'name': 'Influencer',
-            'description': 'Earned 500 total likes',
-            'image': '/badges/influencer.png',
+            'description': 'Earned 200 total likes',
+            'icon': '/badges/influencer.png',
             'rarity': 'legendary',
             'category': 'social',
-            'unlock_criteria': {'type': 'total_likes', 'value': 500}
+            'unlock_criteria': {'type': 'total_likes', 'value': 200}
+        },
+        
+        # Streak badges - for consistent activity
+        {
+            'name': 'Consistent Creator',
+            'description': 'Maintained a 7-day streak',
+            'icon': '/badges/consistent_creator.png',
+            'rarity': 'rare',
+            'category': 'streak',
+            'unlock_criteria': {'type': 'streak_days', 'value': 7}
+        },
+        {
+            'name': 'Dedicated Curator',
+            'description': 'Maintained a 30-day streak',
+            'icon': '/badges/dedicated_curator.png',
+            'rarity': 'epic',
+            'category': 'streak',
+            'unlock_criteria': {'type': 'streak_days', 'value': 30}
+        },
+        {
+            'name': 'Eternal Flame',
+            'description': 'Maintained a 100-day streak',
+            'icon': '/badges/eternal_flame.png',
+            'rarity': 'legendary',
+            'category': 'streak',
+            'unlock_criteria': {'type': 'streak_days', 'value': 100}
+        },
+        
+        # Special badges - for unique achievements
+        {
+            'name': 'Taste Maker',
+            'description': 'Reached curator level 5',
+            'icon': '/badges/taste_maker.png',
+            'rarity': 'epic',
+            'category': 'special',
+            'unlock_criteria': {'type': 'curator_level', 'value': 5}
+        },
+        {
+            'name': 'Legendary Curator',
+            'description': 'Reached curator level 10',
+            'icon': '/badges/legendary_curator.png',
+            'rarity': 'legendary',
+            'category': 'special',
+            'unlock_criteria': {'type': 'curator_level', 'value': 10}
+        },
+        {
+            'name': 'Aura Master',
+            'description': 'Perfected your aesthetic profile',
+            'icon': '/badges/aura_master.png',
+            'rarity': 'legendary',
+            'category': 'special',
+            'unlock_criteria': {'type': 'aura_complete', 'value': 1}
         },
     ]
     
