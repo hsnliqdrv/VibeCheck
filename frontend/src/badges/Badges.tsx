@@ -19,7 +19,6 @@ interface Badge {
   unlockedDate?: string;
 }
 
-// Maps badge icon/category/rarity strings to a Lucide component
 const ICON_MAP: Record<string, React.ElementType> = {
   trophy: Trophy, star: Star, flame: Flame, fire: Flame,
   zap: Zap, crown: Crown, heart: Heart, globe: Globe,
@@ -45,7 +44,6 @@ function resolveLucideIcon(badge: Badge): React.ElementType {
   return Award;
 }
 
-// Explicit Variants type annotation fixes TS2322 with framer-motion v12
 const pageVariants: Variants = {
   initial: { opacity: 0 },
   animate: { opacity: 1, transition: { staggerChildren: 0.07, delayChildren: 0.05 } },
@@ -82,7 +80,6 @@ const BadgesPage: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen]         = useState<boolean>(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  // Close dropdown on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
@@ -216,7 +213,6 @@ const BadgesPage: React.FC = () => {
           <p>No badges match your filters.</p>
         </motion.div>
       ) : (
-        /* Cards use pure CSS animation (storyFloat) — same as StoryCard.css */
         <div className="bg-grid">
           {filtered.map(badge => {
             const rarity    = badge.rarity?.toLowerCase() ?? 'common';
