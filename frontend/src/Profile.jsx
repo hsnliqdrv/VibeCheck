@@ -33,8 +33,6 @@ export default function Profile() {
     const loadData = async () => {
       try {
         setLoading(true);
-        // Используем Promise.allSettled вместо Promise.all
-        // Это позволит профилю загрузиться, даже если один из запросов (например, мок) упадет
         const results = await Promise.allSettled([
           getUserProfile(),
           getAuraProfile(),
@@ -75,8 +73,6 @@ export default function Profile() {
           </button>
         </div>
       </section>
-
-      {/* Безопасная отрисовка куратора */}
       {curatorData && (
         <section className="curator-section">
           <div className="curator-card">
@@ -85,7 +81,6 @@ export default function Profile() {
                 <h3>Curator Status</h3>
                 <p className="curator-subtitle">Your journey to legendary taste</p>
               </div>
-              {/* Используем ?. везде */}
               <div className="curator-level-badge">{curatorData?.level || 0}</div>
             </div>
 
@@ -110,11 +105,10 @@ export default function Profile() {
               <div className="c-stat-item">
                 <div className="c-icon-box blue"><Star size={18} /></div>
                 <div className="c-stat-info">
-                  {/* САМОЕ ВАЖНОЕ МЕСТО: curatorData?.stats?.totalShares */}
                   <span className="c-val">{curatorData?.stats?.totalShares ?? 0}</span>
                   <span className="c-lab">Total Shares</span>
                 </div>
-              </div>
+              </div> 
               <div className="c-stat-item">
                 <div className="c-icon-box orange"><Flame size={18} /></div>
                 <div className="c-stat-info">
@@ -135,6 +129,38 @@ export default function Profile() {
                   <span className="c-val">{curatorData?.stats?.earlyFinds ?? 0}</span>
                   <span className="c-lab">Early Finds</span>
                 </div>
+              </div>
+            </div>
+            {/* Секция наград и разблокировок */}
+            <div className="curator-rewards-section">
+              <h4>Current Level Rewards</h4>
+              <div className="rewards-list">
+                {curatorData?.rewards?.length > 0 ? (
+                  curatorData.rewards.map((reward, index) => (
+                    <span key={index} className="reward-tag">
+                      {reward}
+                    </span>
+                  ))
+                ) : (
+                  <span className="empty-text">No rewards yet</span>
+                )}
+              </div>
+            </div>
+
+            {/* Секция достижений */}
+            <div className="achievements-container">
+              <h4>Recent Achievements</h4>
+              <div className="achievements-grid">
+                {curatorData?.recentAchievements?.length > 0 ? (
+                  curatorData.recentAchievements.map((ach, index) => (
+                    <div key={index} className="achievement-badge">
+                      <Trophy size={14} />
+                      <span>{ach}</span>
+                    </div>
+                  ))
+                ) : (
+                  <span className="empty-text">No achievements yet</span>
+                )}
               </div>
             </div>
           </div>
