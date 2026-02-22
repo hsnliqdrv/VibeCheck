@@ -1,9 +1,7 @@
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
-import axios from "axios";
 import { useNavigate } from "react-router-dom";
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+import { register as registerUser } from "./services/api";
 
 export default function Register() {
   const { register, handleSubmit } = useForm();
@@ -20,8 +18,8 @@ export default function Register() {
     setStatus({ loading: true, error: "", success: "" });
 
     try {
-      const response = await axios.post(`${API_BASE_URL}/auth/register`, data);
-      const { token, user } = response.data || {};
+      const response = await registerUser(data);
+      const { token, user } = response || {};
 
       if (!token || !user) {
         throw new Error("Unexpected response format.");

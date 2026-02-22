@@ -98,15 +98,26 @@
   border-radius: 999px;
 }
 
+.bg-controls-outer {
+  width: 100%;
+  overflow: visible;
+  margin-bottom: 1.5rem;
+  touch-action: pan-y;
+  cursor: grab;
+}
+
+.bg-controls-outer:active {
+  cursor: grabbing;
+}
+
 .bg-controls {
   display: flex;
-  gap: 10px;
+  gap: 12px;
   flex-wrap: nowrap;
   align-items: center;
-  margin-bottom: 1.25rem;
   position: relative;
   z-index: 50;
-  overflow: visible;
+  width: max-content;
 }
 
 .bg-toggle {
@@ -249,13 +260,27 @@
 }
 
 @keyframes float-in {
-  from { opacity: 0; transform: translateY(18px) scale(0.98); }
-  to   { opacity: 1; transform: translateY(0)    scale(1);    }
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 @keyframes storyFloat {
-  from { opacity: 0; transform: translateY(20px) scale(0.96); }
-  to   { opacity: 1; transform: translateY(0)    scale(1);    }
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.96);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 .bg-grid {

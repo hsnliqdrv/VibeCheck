@@ -1,7 +1,7 @@
 import axios from "axios";
 
 // Default to the Apidog mock server for development when VITE_API_BASE_URL isn't set
-const API_BASE = import.meta.env.VITE_API_BASE_URL || "https://mock.apidog.com/m1/1194510-1189388-1080556";
+const API_BASE = import.meta.env.VITE_API_BASE_URL || "https://mock.apidog.com/m1/1194510-1189388-default";
 
 const api = axios.create({
   baseURL: API_BASE,
@@ -13,6 +13,10 @@ api.interceptors.request.use((config) => {
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
+
+// Auth
+export const login = (data) => api.post("/auth/login", data).then((r) => r.data);
+export const register = (data) => api.post("/auth/register", data).then((r) => r.data);
 
 // Content
 export const getMovies = (params = {}) =>
@@ -59,6 +63,8 @@ export const updateAuraProfile = (body) =>
   api.put("/aura/profile", body).then((r) => r.data);
 export const getUserAura = (userId) =>
   api.get(`/aura/profile/${userId}`).then((r) => r.data);
+export const getAuraMatches = (params = {}) =>
+  api.get("/aura/matches", { params }).then((r) => r.data);
 
 // Shares
 export const getMyShares = (params = {}) =>

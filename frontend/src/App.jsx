@@ -5,6 +5,7 @@ import Register from "./Register";
 import Profile from "./Profile";
 import { StoryGenerator } from "./components/stories";
 import BadgesPage from "./badges/Badges";
+import DiscoverPage from "./discover/Discover";
 import "./App.css";
 
 function AppShell() {
@@ -51,6 +52,7 @@ function AppShell() {
           {!isAuthed && <Link to="/">Login</Link>}
           {!isAuthed && <Link to="/register">Register</Link>}
           {isAuthed && <Link to="/stories">Stories</Link>}
+          {isAuthed && <Link to="/discover">Discover</Link>}
           {isAuthed && <Link to="/badges">Badges</Link>}
           {isAuthed && <Link to="/profile">Profile</Link>}
           {isAuthed && (
@@ -65,6 +67,7 @@ function AppShell() {
         <Route path="/" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/stories" element={<StoryGenerator />} />
+        <Route path="/discover" element={<DiscoverPage />} />
         <Route path="/badges" element={<BadgesPage />} />
         <Route path="/profile" element={<Profile />} />
       </Routes>
