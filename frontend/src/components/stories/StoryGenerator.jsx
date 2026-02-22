@@ -159,6 +159,10 @@ export default function StoryGenerator() {
               <button
                 type="button"
                 className="story-generator__btn story-generator__btn--secondary"
+                onClick={() => {
+                  console.log(selectedContent["url"]);
+                  window.location.href = selectedContent['url'] || "#";
+                }}
               >
                 <ExternalLink size={18} />
                 Get the Vibe
