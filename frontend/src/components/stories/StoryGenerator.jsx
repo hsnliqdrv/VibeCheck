@@ -154,8 +154,7 @@ export default function StoryGenerator() {
                 onClick={handleShare}
                 disabled={sharing}
               >
-                <Download size={18} />
-                {sharing ? "Sharing…" : "Export to Instagram Story"}
+                {sharing ? "Sharing…" : "Share Story"}
               </button>
               <button
                 type="button"
