@@ -61,18 +61,18 @@ function resolveLucideIcon(badge: Badge): React.ElementType {
   if (BADGE_NAME_ICONS[badgeNameKey]) {
     return BADGE_NAME_ICONS[badgeNameKey];
   }
-  
+
   // Then try icon property
   if (badge.icon && !badge.icon.startsWith('http')) {
     const key = badge.icon.toLowerCase().replace(/\s+/g, '');
     if (ICON_MAP[key]) return ICON_MAP[key];
   }
-  
+
   // Then try category
   if (badge.category && ICON_MAP[badge.category.toLowerCase()]) {
     return ICON_MAP[badge.category.toLowerCase()];
   }
-  
+
   // Finally, fall back to rarity
   const r = badge.rarity?.toLowerCase();
   if (r === 'legendary') return Crown;
@@ -93,28 +93,28 @@ const itemSlideIn: Variants = {
 
 const RARITY_GRADIENT: Record<string, string> = {
   legendary: 'linear-gradient(135deg, #FF9500 0%, #FF0055 100%)',
-  epic:      'linear-gradient(135deg, #9C2CF3 0%, #3A47D5 100%)',
-  rare:      'linear-gradient(135deg, #2563eb 0%, #7c3aed 100%)',
-  uncommon:  'linear-gradient(135deg, #059669 0%, #0891b2 100%)',
-  common:    'linear-gradient(135deg, #6b6bf8 0%, #b44aff 100%)',
+  epic: 'linear-gradient(135deg, #9C2CF3 0%, #3A47D5 100%)',
+  rare: 'linear-gradient(135deg, #2563eb 0%, #7c3aed 100%)',
+  uncommon: 'linear-gradient(135deg, #059669 0%, #0891b2 100%)',
+  common: 'linear-gradient(135deg, #6b6bf8 0%, #b44aff 100%)',
 };
 
 const RARITY_SHADOW: Record<string, string> = {
   legendary: 'rgba(255,149,0,0.35)',
-  epic:      'rgba(156,44,243,0.35)',
-  rare:      'rgba(37,99,235,0.35)',
-  uncommon:  'rgba(5,150,105,0.35)',
-  common:    'rgba(107,107,248,0.3)',
+  epic: 'rgba(156,44,243,0.35)',
+  rare: 'rgba(37,99,235,0.35)',
+  uncommon: 'rgba(5,150,105,0.35)',
+  common: 'rgba(107,107,248,0.3)',
 };
 
 const VIEW_FILTERS = ['all', 'unlocked', 'locked'] as const;
 const CATEGORY_FILTERS = ['all', 'early', 'completionist', 'streak', 'social', 'special'] as const;
 
 const BadgesPage: React.FC = () => {
-  const [badges, setBadges]                 = useState<Badge[]>([]);
-  const [viewFilter, setViewFilter]         = useState<string>('all');
+  const [badges, setBadges] = useState<Badge[]>([]);
+  const [viewFilter, setViewFilter] = useState<string>('all');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
-  const [isMenuOpen, setIsMenuOpen]         = useState<boolean>(false);
+  const [isMenuOpen, setIsMenuOpen] = useState<boolean>(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -142,7 +142,7 @@ const BadgesPage: React.FC = () => {
 
   const filtered = badges.filter(b => {
     const matchView = viewFilter === 'all' || (viewFilter === 'unlocked' ? b.unlocked : !b.unlocked);
-    const matchCat  = categoryFilter === 'all' || b.category?.toLowerCase() === categoryFilter;
+    const matchCat = categoryFilter === 'all' || b.category?.toLowerCase() === categoryFilter;
     return matchView && matchCat;
   });
 
@@ -152,6 +152,8 @@ const BadgesPage: React.FC = () => {
   const categoryLabel = categoryFilter === 'all'
     ? 'All Categories'
     : categoryFilter.charAt(0).toUpperCase() + categoryFilter.slice(1);
+
+  const constraintsRef = useRef<HTMLDivElement>(null);
 
   return (
     <motion.div className="bg-page" variants={pageVariants} initial="initial" animate="animate">
@@ -179,56 +181,64 @@ const BadgesPage: React.FC = () => {
         </motion.div>
       </header>
 
-      <motion.div variants={itemSlideIn} className="bg-controls">
-        <div className="bg-toggle">
-          {VIEW_FILTERS.map(f => (
-            <button
-              key={f}
-              type="button"
-              className={`bg-pill ${viewFilter === f ? 'bg-pill--active' : ''}`}
-              onClick={() => setViewFilter(f)}
-            >
-              {f.charAt(0).toUpperCase() + f.slice(1)}
-            </button>
-          ))}
-        </div>
-
-        <div className="bg-dropdown-wrap" ref={menuRef}>
-          <button
-            type="button"
-            className={`bg-pill bg-pill--dropdown ${isMenuOpen ? 'bg-pill--active' : ''}`}
-            onClick={() => setIsMenuOpen(v => !v)}
-          >
-            <span className="bg-pill-label">{categoryLabel}</span>
-            {isMenuOpen
-              ? <ChevronUp size={13} strokeWidth={2.5} className="bg-chevron" />
-              : <ChevronDown size={13} strokeWidth={2.5} className="bg-chevron" />}
-          </button>
-
-          <AnimatePresence>
-            {isMenuOpen && (
-              <motion.div
-                className="bg-dropdown"
-                initial={{ opacity: 0, scale: 0.92, y: -8 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.92, y: -8 }}
-                transition={{ type: 'spring', stiffness: 320, damping: 26 }}
+      <div className="bg-controls-outer" ref={constraintsRef}>
+        <motion.div
+          className="bg-controls"
+          drag="x"
+          dragConstraints={constraintsRef}
+          dragElastic={0.1}
+          dragTransition={{ bounceStiffness: 600, bounceDamping: 20 }}
+        >
+          <div className="bg-toggle">
+            {VIEW_FILTERS.map(f => (
+              <button
+                key={f}
+                type="button"
+                className={`bg-pill ${viewFilter === f ? 'bg-pill--active' : ''}`}
+                onClick={() => setViewFilter(f)}
               >
-                {CATEGORY_FILTERS.map(c => (
-                  <button
-                    key={c}
-                    type="button"
-                    className={`bg-dropdown-item ${categoryFilter === c ? 'bg-dropdown-item--active' : ''}`}
-                    onClick={() => { setCategoryFilter(c); setIsMenuOpen(false); }}
-                  >
-                    {c === 'all' ? 'All Categories' : c.charAt(0).toUpperCase() + c.slice(1)}
-                  </button>
-                ))}
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-      </motion.div>
+                {f.charAt(0).toUpperCase() + f.slice(1)}
+              </button>
+            ))}
+          </div>
+
+          <div className="bg-dropdown-wrap" ref={menuRef}>
+            <button
+              type="button"
+              className={`bg-pill bg-pill--dropdown ${isMenuOpen ? 'bg-pill--active' : ''}`}
+              onClick={() => setIsMenuOpen(v => !v)}
+            >
+              <span className="bg-pill-label">{categoryLabel}</span>
+              {isMenuOpen
+                ? <ChevronUp size={13} strokeWidth={2.5} className="bg-chevron" />
+                : <ChevronDown size={13} strokeWidth={2.5} className="bg-chevron" />}
+            </button>
+
+            <AnimatePresence>
+              {isMenuOpen && (
+                <motion.div
+                  className="bg-dropdown"
+                  initial={{ opacity: 0, scale: 0.92, y: -8 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.92, y: -8 }}
+                  transition={{ type: 'spring', stiffness: 320, damping: 26 }}
+                >
+                  {CATEGORY_FILTERS.map(c => (
+                    <button
+                      key={c}
+                      type="button"
+                      className={`bg-dropdown-item ${categoryFilter === c ? 'bg-dropdown-item--active' : ''}`}
+                      onClick={() => { setCategoryFilter(c); setIsMenuOpen(false); }}
+                    >
+                      {c === 'all' ? 'All Categories' : c.charAt(0).toUpperCase() + c.slice(1)}
+                    </button>
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        </motion.div>
+      </div>
 
       <motion.div variants={itemSlideIn} className="bg-progress-track">
         <motion.div
@@ -247,9 +257,9 @@ const BadgesPage: React.FC = () => {
       ) : (
         <div className="bg-grid">
           {filtered.map(badge => {
-            const rarity    = badge.rarity?.toLowerCase() ?? 'common';
-            const gradient  = badge.unlocked ? (RARITY_GRADIENT[rarity] ?? RARITY_GRADIENT.common) : undefined;
-            const shadow    = badge.unlocked ? (RARITY_SHADOW[rarity]   ?? RARITY_SHADOW.common)   : undefined;
+            const rarity = badge.rarity?.toLowerCase() ?? 'common';
+            const gradient = badge.unlocked ? (RARITY_GRADIENT[rarity] ?? RARITY_GRADIENT.common) : undefined;
+            const shadow = badge.unlocked ? (RARITY_SHADOW[rarity] ?? RARITY_SHADOW.common) : undefined;
             const BadgeIcon = resolveLucideIcon(badge);
 
             return (
