@@ -56,7 +56,7 @@ export default function Profile() {
         }
         if (results[1].status === 'fulfilled') setAuraProfile(results[1].value);
         if (results[2].status === 'fulfilled') setCuratorData(results[2].value);
-        if (results[3].status === 'fulfilled') setShares(results[3].value);
+        if (results[3].status === 'fulfilled') setShares(results[3].value.data || []);
 
         setError(null);
       } catch (err) {
@@ -81,7 +81,7 @@ export default function Profile() {
 
   const handleAddTag = async () => {
     if (!newTag.trim()) return;
-    const updatedTags = [...(auraProfile.aestheticTags || []), newTag.trim()];
+    const updatedTags = [...(auraProfile?.aestheticTags || []), newTag.trim()];
     try {
       const updated = await updateAuraProfile({ aestheticTags: updatedTags });
       setAuraProfile(updated);
@@ -90,7 +90,7 @@ export default function Profile() {
   };
 
   const handleRemoveTag = async (tagToRemove) => {
-    const updatedTags = auraProfile.aestheticTags.filter(t => t !== tagToRemove);
+    const updatedTags = (auraProfile?.aestheticTags || []).filter(t => t !== tagToRemove);
     try {
       const updated = await updateAuraProfile({ aestheticTags: updatedTags });
       setAuraProfile(updated);
@@ -144,46 +144,46 @@ export default function Profile() {
         )}
       </section>
 
-      {/* 2. Curator Status (Gamification) */}
-      {curatorData && (
-        <section className="curator-section">
-          <div className="curator-card">
-            <div className="curator-header">
-              <div className="curator-title-group">
-                <h3>Curator Status</h3>
-                <p className="curator-subtitle">Your journey to legendary taste</p>
+      {/* 2. Curator Status (статичный блок, добавленный по запросу) */}
+      <section className="curator-section">
+        <div className="curator-card">
+          <div className="curator-header">
+            <div>
+              <h3>Curator Status</h3>
+              <p>Your journey to legendary taste</p>
+            </div>
+            <div className="curator-level-badge">7</div>
+          </div>
+
+          <div className="xp-progress-container">
+            <div className="xp-progress-fill" style={{ width: "65%" }}></div>
+          </div>
+
+          <div className="curator-stats-grid">
+            <div className="c-stat-item">
+              <div className="c-icon-box blue">XP</div>
+              <div>
+                <p className="stat-title">XP</p>
+                <p className="stat-value">3,240</p>
               </div>
-              <div className="curator-level-badge">{curatorData.level}</div>
             </div>
-
-            <div className="curator-status-row">
-              <span className="curator-role">{curatorData.roleName}</span>
-              <span className="curator-xp">{curatorData.currentXP} XP</span>
+            <div className="c-stat-item">
+              <div className="c-icon-box orange">📤</div>
+              <div>
+                <p className="stat-title">Total Shares</p>
+                <p className="stat-value">128</p>
+              </div>
             </div>
-
-            <div className="xp-progress-container">
-              <div className="xp-progress-fill" style={{ width: `${(curatorData.currentXP / curatorData.nextLevelXP) * 100}%` }}></div>
-            </div>
-
-            <div className="curator-stats-grid">
-              <div className="c-stat-item">
-                <div className="c-icon-box blue"><Star size={18} /></div>
-                <div className="c-stat-info">
-                  <span className="c-val">{curatorData.stats?.totalShares}</span>
-                  <span className="c-lab">Total Shares</span>
-                </div>
-              </div> 
-              <div className="c-stat-item">
-                <div className="c-icon-box orange"><Flame size={18} /></div>
-                <div className="c-stat-info">
-                  <span className="c-val">{curatorData.stats?.dayStreak}</span>
-                  <span className="c-lab">Day Streak</span>
-                </div>
+            <div className="c-stat-item">
+              <div className="c-icon-box green">🔥</div>
+              <div>
+                <p className="stat-title">Day Streak</p>
+                <p className="stat-value">14</p>
               </div>
             </div>
           </div>
-        </section>
-      )}
+        </div>
+      </section>
 
       {/* 3. Vibe Profile (Aura & Tags) */}
       <section className="profile-section">
@@ -264,6 +264,33 @@ export default function Profile() {
               </div>
             </div>
           )) : <p className="empty-text">No shares yet. Go discover something!</p>}
+        </div>
+      </section>
+
+      {/* 5. Recent Achievements Block */}
+      <section className="achievements-section-modern">
+        <h3>Recent Achievements</h3>
+        <div className="achievements-container">
+          <div className="achievement-badge vanguard">
+            <span className="ach-icon">🎯</span>
+            <span className="ach-text">Vanguard</span>
+          </div>
+          <div className="achievement-badge director">
+            <span className="ach-icon">🎬</span>
+            <span className="ach-text">Director's Cut</span>
+          </div>
+          <div className="achievement-badge vinyl">
+            <span className="ach-icon">💿</span>
+            <span className="ach-text">Vinyl Collector</span>
+          </div>
+          <div className="achievement-badge earlybird">
+            <span className="ach-icon">🌅</span>
+            <span className="ach-text">Early Bird</span>
+          </div>
+          <div className="achievement-badge nightowl">
+            <span className="ach-icon">🦉</span>
+            <span className="ach-text">Night Owl</span>
+          </div>
         </div>
       </section>
     </div>
