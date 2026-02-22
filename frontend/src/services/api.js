@@ -66,6 +66,10 @@ export const getUserAura = (userId) =>
 export const getAuraMatches = (params = {}) =>
   api.get("/aura/matches", { params }).then((r) => r.data);
 
+// Curator Stats
+export const getCuratorStats = () =>
+  api.get("/curator/stats").then((r) => r.data);
+
 // Shares
 export const getMyShares = (params = {}) =>
   api.get("/aura/shares", { params }).then((r) => r.data);
