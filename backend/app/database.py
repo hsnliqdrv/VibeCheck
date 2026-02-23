@@ -1,6 +1,6 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import scoped_session, sessionmaker, declarative_base
-from flask import current_app, g
+from flask import g
 
 Base = declarative_base()
 engine = None
@@ -18,7 +18,8 @@ def init_db(app):
     session_factory = sessionmaker(bind=engine)
     
     # Import all models to ensure they're registered
-    from app.models import user, content, share, post, badge
+    from app.models import user, content, share, post, badge, gamification
+    # from app.models import user, content, share, post, gamification
     
     # Create all tables
     Base.metadata.create_all(engine)

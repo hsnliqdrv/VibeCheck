@@ -154,12 +154,15 @@ export default function StoryGenerator() {
                 onClick={handleShare}
                 disabled={sharing}
               >
-                <Download size={18} />
-                {sharing ? "Sharing…" : "Export to Instagram Story"}
+                {sharing ? "Sharing…" : "Share Story"}
               </button>
               <button
                 type="button"
                 className="story-generator__btn story-generator__btn--secondary"
+                onClick={() => {
+                  console.log(selectedContent["url"]);
+                  window.location.href = selectedContent['url'] || "#";
+                }}
               >
                 <ExternalLink size={18} />
                 Get the Vibe

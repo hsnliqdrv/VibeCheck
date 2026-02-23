@@ -6,6 +6,7 @@ import {
   updateUserProfile,
   getAuraProfile,
   updateAuraProfile,
+  getCuratorStats,
 } from "./services/api";
 import "./Profile.css";
 
@@ -21,6 +22,7 @@ export default function Profile() {
   const navigate = useNavigate();
   const [userProfile, setUserProfile] = useState(null);
   const [auraProfile, setAuraProfile] = useState(null);
+  const [curatorStats, setCuratorStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -41,23 +43,55 @@ export default function Profile() {
   // Load data
   useEffect(() => {
     const loadData = async () => {
+      setLoading(true);
+      let errorMessage = null;
+
       try {
-        setLoading(true);
-        const [userRes, auraRes] = await Promise.all([
+        const [userRes, auraRes, curatorRes] = await Promise.allSettled([
           getUserProfile(),
           getAuraProfile(),
+          getCuratorStats(),
         ]);
-        setUserProfile(userRes);
-        setAuraProfile(auraRes);
-        setProfileForm({
-          bio: userRes.bio || "",
-          avatar: userRes.avatar || "",
-        });
-        setAuraForm({
-          aestheticTags: auraRes.aestheticTags || [],
-          auraColors: auraRes.auraColors || [],
-        });
-        setError(null);
+
+        if (userRes.status === "fulfilled") {
+          setUserProfile(userRes.value);
+          setProfileForm({
+            bio: userRes.value.bio || "",
+            avatar: userRes.value.avatar || "",
+          });
+        } else {
+          const err = userRes.reason;
+          errorMessage = err.response?.data?.message || "Failed to load profile";
+          if (err.response?.status === 401) navigate("/");
+        }
+
+        if (auraRes.status === "fulfilled") {
+          setAuraProfile(auraRes.value);
+          setAuraForm({
+            aestheticTags: auraRes.value.aestheticTags || [],
+            auraColors: auraRes.value.auraColors || [],
+          });
+        } else {
+          const err = auraRes.reason;
+          errorMessage =
+            errorMessage ||
+            err.response?.data?.message ||
+            "Failed to load aura profile";
+          if (err.response?.status === 401) navigate("/");
+        }
+
+        if (curatorRes.status === "fulfilled") {
+          setCuratorStats(curatorRes.value);
+        } else {
+          const err = curatorRes.reason;
+          errorMessage =
+            errorMessage ||
+            err.response?.data?.message ||
+            "Failed to load curator stats";
+          if (err.response?.status === 401) navigate("/");
+        }
+
+        setError(errorMessage);
       } catch (err) {
         setError(err.response?.data?.message || "Failed to load profile");
         if (err.response?.status === 401) navigate("/");
@@ -339,6 +373,140 @@ export default function Profile() {
               </button>
             )}
           </div>
+        )}
+      </section>
+
+      {/* Curator Progress Section */}
+      <section className="profile-section">
+        <h2>Curator Progress</h2>
+        {curatorStats ? (
+          <div className="curator-progress">
+            <div className="curator-stats-grid">
+              <div className="curator-stat-card">
+                <span className="curator-label">Current Level</span>
+                <span className="curator-value">{curatorStats.currentLevel}</span>
+              </div>
+              <div className="curator-stat-card">
+                <span className="curator-label">Total XP</span>
+                <span className="curator-value">{curatorStats.totalXP}</span>
+              </div>
+              <div className="curator-stat-card">
+                <span className="curator-label">Total Shares</span>
+                <span className="curator-value">{curatorStats.totalShares}</span>
+              </div>
+              <div className="curator-stat-card">
+                <span className="curator-label">Streak Days</span>
+                <span className="curator-value">
+                  {curatorStats.streakDays ?? 0}
+                </span>
+              </div>
+            </div>
+
+            <div className="curator-metrics">
+              {typeof curatorStats.finishedBooks === "number" && (
+                <div className="metric-row">
+                  <span className="metric-label">Finished Books</span>
+                  <span className="metric-value">{curatorStats.finishedBooks}</span>
+                </div>
+              )}
+              {typeof curatorStats.earlyDiscoveries === "number" && (
+                <div className="metric-row">
+                  <span className="metric-label">Early Discoveries</span>
+                  <span className="metric-value">{curatorStats.earlyDiscoveries}</span>
+                </div>
+              )}
+              {curatorStats.completedFilmographies &&
+                curatorStats.completedFilmographies.length > 0 && (
+                  <div className="metric-row">
+                    <span className="metric-label">Completed Filmographies</span>
+                    <span className="metric-value">
+                      {curatorStats.completedFilmographies.join(", ")}
+                    </span>
+                  </div>
+                )}
+            </div>
+
+            <div className="curator-badges">
+              <h3>Badges</h3>
+              {curatorStats.badges && curatorStats.badges.length > 0 ? (
+                <div className="badge-list">
+                  {curatorStats.badges.map((badge) => {
+                    const maxProgress = badge.maxProgress || 0;
+                    const progressValue = badge.progress || 0;
+                    const progressPercent =
+                      maxProgress > 0
+                        ? Math.min(
+                            100,
+                            Math.round((progressValue / maxProgress) * 100)
+                          )
+                        : null;
+
+                    return (
+                      <div
+                        key={badge.id}
+                        className={`badge-item ${badge.unlocked ? "unlocked" : ""}`}
+                      >
+                        <div className="badge-header">
+                          <div>
+                            <div className="badge-name">{badge.name}</div>
+                            {badge.description && (
+                              <div className="badge-description">
+                                {badge.description}
+                              </div>
+                            )}
+                          </div>
+                          <div className="badge-meta">
+                            <span className="badge-rarity">{badge.rarity}</span>
+                            {badge.category && (
+                              <span className="badge-category">
+                                {badge.category}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {progressPercent !== null && (
+                          <div className="badge-progress">
+                            <div className="badge-progress-bar">
+                              <div
+                                className="badge-progress-fill"
+                                style={{ width: `${progressPercent}%` }}
+                              />
+                            </div>
+                            <span className="badge-progress-text">
+                              {progressValue}/{maxProgress}
+                            </span>
+                          </div>
+                        )}
+
+                        {badge.unlocked && badge.unlockedDate && (
+                          <div className="badge-unlocked">
+                            Unlocked on{" "}
+                            {new Date(badge.unlockedDate).toLocaleDateString(
+                              undefined,
+                              {
+                                year: "numeric",
+                                month: "short",
+                                day: "numeric",
+                              }
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="empty-state">
+                  No badges yet. Keep sharing to unlock more.
+                </p>
+              )}
+            </div>
+          </div>
+        ) : (
+          <p className="empty-state">
+            Curator stats are not available yet.
+          </p>
         )}
       </section>
 

@@ -766,6 +766,306 @@ class VibeCheckAPITester:
             return False
     
     # ─────────────────────────────────────────────────────────
+    # BADGES & GAMIFICATION TESTS
+    # ─────────────────────────────────────────────────────────
+    
+    def test_get_all_badges(self):
+        """Test getting all available badges"""
+        try:
+            response = requests.get(f"{self.base_url}/badges")
+            passed = response.status_code == 200
+            
+            if passed and response.json():
+                data = response.json()
+                # Verify response is a direct array of Badge objects (per OpenAPI spec)
+                if isinstance(data, list):
+                    passed = True  # Array is correct format
+                else:
+                    passed = False  # Should be array, not object
+            
+            self._log_test("GET /badges", passed, response)
+            return passed
+        except Exception as e:
+            self._log_test("GET /badges", False, error=e)
+            return False
+    
+    def test_get_badges_by_rarity(self):
+        """Test getting badges filtered by rarity"""
+        try:
+            rarities = ['common', 'rare', 'epic', 'legendary']
+            
+            for rarity in rarities:
+                response = requests.get(f"{self.base_url}/badges", params={'rarity': rarity})
+                passed = response.status_code == 200
+                
+                self._log_test(f"GET /badges?rarity={rarity}", passed, response)
+                
+                if not passed:
+                    return False
+            
+            return True
+        except Exception as e:
+            self._log_test("GET /badges by rarity", False, error=e)
+            return False
+    
+    def test_get_badges_by_category(self):
+        """Test getting badges filtered by category"""
+        try:
+            categories = ['early', 'completionist', 'social', 'streak', 'special']
+            
+            for category in categories:
+                response = requests.get(f"{self.base_url}/badges", params={'category': category})
+                passed = response.status_code == 200
+                
+                self._log_test(f"GET /badges?category={category}", passed, response)
+                
+                if not passed:
+                    return False
+            
+            return True
+        except Exception as e:
+            self._log_test("GET /badges by category", False, error=e)
+            return False
+    
+    def test_get_badges_with_multiple_filters(self):
+        """Test getting badges with multiple filters"""
+        try:
+            response = requests.get(f"{self.base_url}/badges", 
+                                   params={'rarity': 'rare', 'category': 'social'})
+            passed = response.status_code == 200
+            
+            self._log_test("GET /badges?rarity=rare&category=social", passed, response)
+            return passed
+        except Exception as e:
+            self._log_test("GET /badges with multiple filters", False, error=e)
+            return False
+    
+    def test_get_user_badges(self):
+        """Test getting current user's badges"""
+        if not self.token:
+            self._log_test("GET /badges/user (no token)", False, error="No auth token available")
+            return False
+        
+        try:
+            headers = {"Authorization": f"Bearer {self.token}"}
+            response = requests.get(f"{self.base_url}/badges/user", headers=headers)
+            passed = response.status_code == 200
+            
+            if passed and response.json():
+                data = response.json()
+                # Verify response is an object with required fields
+                if isinstance(data, dict):
+                    required_fields = ['badges', 'unlockedCount', 'totalCount']
+                    passed = all(field in data for field in required_fields)
+                    if passed:
+                        passed = isinstance(data['badges'], list) and isinstance(data['unlockedCount'], int) and isinstance(data['totalCount'], int)
+                else:
+                    passed = False
+            
+            self._log_test("GET /badges/user", passed, response)
+            return passed
+        except Exception as e:
+            self._log_test("GET /badges/user", False, error=e)
+            return False
+    
+    def test_get_user_badges_by_id(self):
+        """Test getting user's badges by user ID"""
+        if not self.user_id:
+            self._log_test("GET /badges/user/{userId} (no user id)", False, error="No user ID available")
+            return False
+        
+        try:
+            response = requests.get(f"{self.base_url}/badges/user/{self.user_id}")
+            passed = response.status_code == 200
+            
+            if passed and response.json():
+                data = response.json()
+                # Verify response is an object with required fields
+                if isinstance(data, dict):
+                    required_fields = ['badges', 'unlockedCount', 'totalCount']
+                    passed = all(field in data for field in required_fields)
+                    if passed:
+                        passed = isinstance(data['badges'], list) and isinstance(data['unlockedCount'], int) and isinstance(data['totalCount'], int)
+                else:
+                    passed = False
+            
+            self._log_test(f"GET /badges/user/{self.user_id}", passed, response)
+            return passed
+        except Exception as e:
+            self._log_test(f"GET /badges/user/{self.user_id}", False, error=e)
+            return False
+    
+    def test_get_nonexistent_user_badges(self):
+        """Test getting badges for non-existent user"""
+        try:
+            fake_user_id = "nonexistent_user_" + self._random_string()
+            response = requests.get(f"{self.base_url}/badges/user/{fake_user_id}")
+            passed = response.status_code == 404
+            
+            self._log_test("GET /badges/user/{nonexistentId} (should 404)", passed, response)
+            return passed
+        except Exception as e:
+            self._log_test("GET /badges/user/{nonexistentId} (should 404)", False, error=e)
+            return False
+    
+    def test_get_curator_stats(self):
+        """Test getting current user's curator statistics"""
+        if not self.token:
+            self._log_test("GET /curator/stats (no token)", False, error="No auth token available")
+            return False
+        
+        try:
+            headers = {"Authorization": f"Bearer {self.token}"}
+            response = requests.get(f"{self.base_url}/curator/stats", headers=headers)
+            passed = response.status_code == 200
+            
+            if passed and response.json():
+                data = response.json()
+                # Verify required fields are present
+                required_fields = ['totalShares', 'totalXP', 'currentLevel']
+                if isinstance(data, dict):
+                    # Check if all required fields exist
+                    passed = all(field in data for field in required_fields)
+            
+            self._log_test("GET /curator/stats", passed, response)
+            return passed
+        except Exception as e:
+            self._log_test("GET /curator/stats", False, error=e)
+            return False
+    
+    def test_get_curator_stats_by_id(self):
+        """Test getting user's curator statistics by user ID"""
+        if not self.user_id:
+            self._log_test("GET /curator/stats/{userId} (no user id)", False, error="No user ID available")
+            return False
+        
+        try:
+            response = requests.get(f"{self.base_url}/curator/stats/{self.user_id}")
+            passed = response.status_code == 200
+            
+            if passed and response.json():
+                data = response.json()
+                required_fields = ['totalShares', 'totalXP', 'currentLevel']
+                if isinstance(data, dict):
+                    passed = all(field in data for field in required_fields)
+            
+            self._log_test(f"GET /curator/stats/{self.user_id}", passed, response)
+            return passed
+        except Exception as e:
+            self._log_test(f"GET /curator/stats/{self.user_id}", False, error=e)
+            return False
+    
+    def test_get_nonexistent_user_curator_stats(self):
+        """Test getting curator stats for non-existent user"""
+        try:
+            fake_user_id = "nonexistent_user_" + self._random_string()
+            response = requests.get(f"{self.base_url}/curator/stats/{fake_user_id}")
+            passed = response.status_code == 404
+            
+            self._log_test("GET /curator/stats/{nonexistentId} (should 404)", passed, response)
+            return passed
+        except Exception as e:
+            self._log_test("GET /curator/stats/{nonexistentId} (should 404)", False, error=e)
+            return False
+    
+    def test_get_curator_levels(self):
+        """Test getting all curator levels"""
+        try:
+            response = requests.get(f"{self.base_url}/curator/levels")
+            passed = response.status_code == 200
+            
+            if passed and response.json():
+                data = response.json()
+                # Verify response is a list or has a levels field
+                if isinstance(data, list):
+                    passed = len(data) > 0
+                    # Verify each level has required fields
+                    if passed:
+                        level = data[0]
+                        required_fields = ['level', 'name', 'xpRequired']
+                        passed = all(field in level for field in required_fields)
+                elif isinstance(data, dict) and 'levels' in data:
+                    passed = isinstance(data['levels'], list) and len(data['levels']) > 0
+            
+            self._log_test("GET /curator/levels", passed, response)
+            return passed
+        except Exception as e:
+            self._log_test("GET /curator/levels", False, error=e)
+            return False
+    
+    def test_get_curator_levels_not_empty(self):
+        """Test that curator levels list is not empty"""
+        try:
+            response = requests.get(f"{self.base_url}/curator/levels")
+            passed = response.status_code == 200
+            
+            if passed and response.json():
+                data = response.json()
+                if isinstance(data, list):
+                    passed = len(data) > 0
+                elif isinstance(data, dict) and 'levels' in data:
+                    passed = len(data['levels']) > 0
+            
+            self._log_test("GET /curator/levels (non-empty)", passed, response)
+            return passed
+        except Exception as e:
+            self._log_test("GET /curator/levels (non-empty)", False, error=e)
+            return False
+    
+    def test_get_curator_levels_structure(self):
+        """Test that curator levels have correct structure"""
+        try:
+            response = requests.get(f"{self.base_url}/curator/levels")
+            passed = response.status_code == 200
+            
+            if passed and response.json():
+                data = response.json()
+                levels = data if isinstance(data, list) else data.get('levels', [])
+                
+                if levels:
+                    for level in levels:
+                        # Check required fields
+                        if 'level' not in level or 'name' not in level or 'xpRequired' not in level:
+                            passed = False
+                            break
+                        # Check types
+                        if not isinstance(level['level'], int) or not isinstance(level['name'], str) or not isinstance(level['xpRequired'], int):
+                            passed = False
+                            break
+            
+            self._log_test("GET /curator/levels (structure validation)", passed, response)
+            return passed
+        except Exception as e:
+            self._log_test("GET /curator/levels (structure validation)", False, error=e)
+            return False
+    
+    def test_badges_unauthorized(self):
+        """Test that protected badge endpoints require auth"""
+        try:
+            # Try to access user badges without token
+            response = requests.get(f"{self.base_url}/badges/user")
+            passed = response.status_code == 401  # Unauthorized expected
+            
+            self._log_test("GET /badges/user (no auth - should 401)", passed, response)
+            return passed
+        except Exception as e:
+            self._log_test("GET /badges/user (no auth - should 401)", False, error=e)
+            return False
+    
+    def test_curator_stats_unauthorized(self):
+        """Test that protected curator stats endpoint requires auth"""
+        try:
+            # Try to access curator stats without token
+            response = requests.get(f"{self.base_url}/curator/stats")
+            passed = response.status_code == 401  # Unauthorized expected
+            
+            self._log_test("GET /curator/stats (no auth - should 401)", passed, response)
+            return passed
+        except Exception as e:
+            self._log_test("GET /curator/stats (no auth - should 401)", False, error=e)
+            return False
+    
+    # ─────────────────────────────────────────────────────────
     # ERROR HANDLING & VALIDATION TESTS
     # ─────────────────────────────────────────────────────────
     
@@ -1822,18 +2122,34 @@ class VibeCheckAPITester:
         print("🏆 Badges & Gamification Tests")
         print("-" * 70)
         self.test_get_all_badges()
-        self.test_get_badges_with_rarity_filter()
-        self.test_get_badges_with_category_filter()
+        
+        # self.test_get_badges_with_rarity_filter()
+        # self.test_get_badges_with_category_filter()
+        # self.test_get_badges_with_multiple_filters()
+        # self.test_get_current_user_badges()
+        # self.test_get_user_badges_by_id()
+        # self.test_get_nonexistent_user_badges()
+        # self.test_get_current_user_curator_stats()
+        # self.test_get_curator_stats_without_auth()
+        # self.test_get_user_curator_stats_by_id()
+        # self.test_get_nonexistent_user_curator_stats()
+        # self.test_get_all_curator_levels()
+        # self.test_curator_levels_are_progressive()
+
+        self.test_get_badges_by_rarity()
+        self.test_get_badges_by_category()
         self.test_get_badges_with_multiple_filters()
-        self.test_get_current_user_badges()
+        self.test_get_user_badges()
         self.test_get_user_badges_by_id()
         self.test_get_nonexistent_user_badges()
-        self.test_get_current_user_curator_stats()
-        self.test_get_curator_stats_without_auth()
-        self.test_get_user_curator_stats_by_id()
+        self.test_get_curator_stats()
+        self.test_get_curator_stats_by_id()
         self.test_get_nonexistent_user_curator_stats()
-        self.test_get_all_curator_levels()
-        self.test_curator_levels_are_progressive()
+        self.test_get_curator_levels()
+        self.test_get_curator_levels_not_empty()
+        self.test_get_curator_levels_structure()
+        self.test_badges_unauthorized()
+        self.test_curator_stats_unauthorized()
         print()
         
         # Social Posts tests
@@ -2048,20 +2364,33 @@ def test_get_all_badges(tester):
     assert tester.test_get_all_badges()
 
 
-def test_get_badges_with_rarity_filter(tester):
-    tester.test_get_badges_with_rarity_filter()
+# def test_get_badges_with_rarity_filter(tester):
+#     tester.test_get_badges_with_rarity_filter()
+
+# def test_get_badges_with_category_filter(tester):
+#     tester.test_get_badges_with_category_filter()
+
+# def test_get_badges_with_multiple_filters(tester):
+#     tester.test_get_badges_with_multiple_filters()
+
+# def test_get_current_user_badges(tester):
+#     tester.test_get_current_user_badges()
 
 
-def test_get_badges_with_category_filter(tester):
-    tester.test_get_badges_with_category_filter()
+def test_get_badges_by_rarity(tester):
+    assert tester.test_get_badges_by_rarity()
+
+
+def test_get_badges_by_category(tester):
+    assert tester.test_get_badges_by_category()
 
 
 def test_get_badges_with_multiple_filters(tester):
-    tester.test_get_badges_with_multiple_filters()
+    assert tester.test_get_badges_with_multiple_filters()
 
 
-def test_get_current_user_badges(tester):
-    tester.test_get_current_user_badges()
+def test_get_user_badges(tester):
+    tester.test_get_user_badges()
 
 
 def test_get_user_badges_by_id(tester):
@@ -2072,28 +2401,53 @@ def test_get_nonexistent_user_badges(tester):
     assert tester.test_get_nonexistent_user_badges()
 
 
-def test_get_current_user_curator_stats(tester):
-    tester.test_get_current_user_curator_stats()
+# def test_get_current_user_curator_stats(tester):
+#     tester.test_get_current_user_curator_stats()
+
+# def test_get_curator_stats_without_auth(tester):
+#     assert tester.test_get_curator_stats_without_auth()
+
+# def test_get_user_curator_stats_by_id(tester):
+#     tester.test_get_user_curator_stats_by_id()
 
 
-def test_get_curator_stats_without_auth(tester):
-    assert tester.test_get_curator_stats_without_auth()
+def test_get_curator_stats(tester):
+    tester.test_get_curator_stats()
 
 
-def test_get_user_curator_stats_by_id(tester):
-    tester.test_get_user_curator_stats_by_id()
+def test_get_curator_stats_by_id(tester):
+    tester.test_get_curator_stats_by_id()
 
 
 def test_get_nonexistent_user_curator_stats(tester):
     assert tester.test_get_nonexistent_user_curator_stats()
 
 
-def test_get_all_curator_levels(tester):
-    assert tester.test_get_all_curator_levels()
+# def test_get_all_curator_levels(tester):
+#     assert tester.test_get_all_curator_levels()
+
+# def test_curator_levels_are_progressive(tester):
+#     assert tester.test_curator_levels_are_progressive()
 
 
-def test_curator_levels_are_progressive(tester):
-    assert tester.test_curator_levels_are_progressive()
+def test_get_curator_levels(tester):
+    assert tester.test_get_curator_levels()
+
+
+def test_get_curator_levels_not_empty(tester):
+    assert tester.test_get_curator_levels_not_empty()
+
+
+def test_get_curator_levels_structure(tester):
+    assert tester.test_get_curator_levels_structure()
+
+
+def test_badges_unauthorized(tester):
+    assert tester.test_badges_unauthorized()
+
+
+def test_curator_stats_unauthorized(tester):
+    assert tester.test_curator_stats_unauthorized()
 
 
 # ─────────────────────────────────────────────────────────

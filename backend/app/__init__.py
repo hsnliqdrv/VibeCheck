@@ -90,7 +90,9 @@ def create_app():
     from app.routes.aura import aura_bp
     from app.routes.search import search_bp
     from app.routes.social import social_bp
-    from app.routes.badges import badges_bp, curator_bp
+    
+    # from app.routes.badges import badges_bp, curator_bp
+    from app.routes.gamification import badges_bp, curator_bp, gamification_bp
 
     app.register_blueprint(auth_bp, url_prefix='/api/v1/auth')
     app.register_blueprint(content_bp, url_prefix='/api/v1/content')
@@ -98,6 +100,7 @@ def create_app():
     app.register_blueprint(aura_bp, url_prefix='/api/v1/aura')
     app.register_blueprint(search_bp, url_prefix='/api/v1/search')
     app.register_blueprint(social_bp, url_prefix='/api/v1/social')
+    app.register_blueprint(gamification_bp, url_prefix='/api/v1')
     
     app.register_blueprint(badges_bp, url_prefix='/api/v1/badges')
     app.register_blueprint(curator_bp, url_prefix='/api/v1/curator')

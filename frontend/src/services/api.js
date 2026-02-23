@@ -1,6 +1,7 @@
 import axios from "axios";
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL;
+// Default to the Apidog mock server for development when VITE_API_BASE_URL isn't set
+const API_BASE = import.meta.env.VITE_API_BASE_URL || "https://mock.apidog.com/m1/1194510-1189388-default";
 
 const api = axios.create({
   baseURL: API_BASE,
@@ -12,6 +13,10 @@ api.interceptors.request.use((config) => {
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
+
+// Auth
+export const login = (data) => api.post("/auth/login", data).then((r) => r.data);
+export const register = (data) => api.post("/auth/register", data).then((r) => r.data);
 
 // Content
 export const getMovies = (params = {}) =>
@@ -58,12 +63,26 @@ export const updateAuraProfile = (body) =>
   api.put("/aura/profile", body).then((r) => r.data);
 export const getUserAura = (userId) =>
   api.get(`/aura/profile/${userId}`).then((r) => r.data);
+export const getAuraMatches = (params = {}) =>
+  api.get("/aura/matches", { params }).then((r) => r.data);
+
+// Curator Stats
+export const getCuratorStats = () =>
+  api.get("/curator/stats").then((r) => r.data);
 
 // Shares
 export const getMyShares = (params = {}) =>
   api.get("/aura/shares", { params }).then((r) => r.data);
 export const createShare = (body) =>
   api.post("/aura/shares", body).then((r) => r.data);
+
+// Badges (OpenAPI: /badges, /badges/user)
+export const getAllBadges = (params = {}) =>
+  api.get("/badges", { params }).then((r) => r.data);
+export const getUserBadges = (params = {}) =>
+  api.get("/badges/user", { params }).then((r) => r.data);
+export const getUserBadgesById = (userId) =>
+  api.get(`/badges/user/${userId}`).then((r) => r.data);
 
 const CATEGORY_FETCHERS = {
   cinema: getMovies,

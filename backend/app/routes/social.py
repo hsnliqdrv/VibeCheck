@@ -4,6 +4,7 @@ from sqlalchemy import desc
 from app.database import get_db
 from app.models.user import User
 from app.models.post import Post, Comment, PostLike
+from app.services.badge_service import BadgeService
 
 social_bp = Blueprint('social', __name__)
 
@@ -180,6 +181,42 @@ def create_community_post():
         db.commit()
         db.refresh(post)
         
+        # Update user curator stats
+        try:
+            from app.models.gamification import UserCuratorStats
+            stats = db.query(UserCuratorStats).filter_by(user_id=current_user_id).first()
+            if not stats:
+                stats = UserCuratorStats(user_id=current_user_id)
+                db.add(stats)
+            
+            # Increment total posts
+            stats.total_posts += 1  # type: ignore
+            
+            # Award XP for creating a post (5 XP)
+            stats.total_xp += 5  # type: ignore
+            stats.current_xp += 5  # type: ignore
+            
+            # Check for level up
+            from app.models.gamification import CuratorLevel
+            next_level = db.query(CuratorLevel).filter(
+                CuratorLevel.level == stats.current_level + 1
+            ).first()
+            
+            if next_level is not None and stats.total_xp >= next_level.xp_required:  # type: ignore
+                stats.current_level = next_level.level  # type: ignore
+                stats.current_xp = stats.total_xp - next_level.xp_required  # type: ignore
+            
+            db.commit()
+        except Exception as stats_error:
+            print(f"Stats update error: {stats_error}")
+        
+        # Check and unlock badges
+        try:
+            BadgeService.check_and_unlock_badges(current_user_id)
+        except Exception as badge_error:
+            # Don't fail the request if badge checking fails
+            print(f"Badge unlock error: {badge_error}")
+        
         return jsonify({
             'message': 'Post created successfully',
             'post': post.to_dict()
@@ -280,8 +317,33 @@ def delete_post(post_id):
                 'message': 'You do not have permission to delete this post'
             }), 403
         
+        # Store post data before deletion for stats update
+        post_likes = post.likes
+        post_comments = post.comment_count
+        
         db.delete(post)
         db.commit()
+        
+        # Update user curator stats
+        try:
+            from app.models.gamification import UserCuratorStats
+            stats = db.query(UserCuratorStats).filter_by(user_id=current_user_id).first()
+            if stats:
+                # Decrement total posts
+                stats.total_posts = max(0, stats.total_posts - 1)  # type: ignore
+                
+                # Decrement likes and comments received
+                stats.total_likes_received = max(0, stats.total_likes_received - post_likes)  # type: ignore
+                stats.total_comments_received = max(0, stats.total_comments_received - post_comments)  # type: ignore
+                
+                # Remove XP (5 for post + 2 per like + 3 per comment)
+                xp_to_remove = 5 + (post_likes * 2) + (post_comments * 3)
+                stats.total_xp = max(0, stats.total_xp - xp_to_remove)  # type: ignore
+                stats.current_xp = max(0, stats.current_xp - xp_to_remove)  # type: ignore
+                
+                db.commit()
+        except Exception as stats_error:
+            print(f"Stats update error: {stats_error}")
         
         return '', 204
         
@@ -362,6 +424,44 @@ def like_post(post_id):
         db.commit()
         db.refresh(post)
         
+        # Update post owner's stats
+        try:
+            from app.models.gamification import UserCuratorStats
+            stats = db.query(UserCuratorStats).filter_by(user_id=post.user_id).first()
+            if not stats:
+                stats = UserCuratorStats(user_id=post.user_id)
+                db.add(stats)
+            
+            # Increment likes received
+            stats.total_likes_received += 1  # type: ignore
+            
+            # Award XP to post owner (2 XP per like received)
+            stats.total_xp += 2  # type: ignore
+            stats.current_xp += 2  # type: ignore
+            
+            # Check for level up
+            from app.models.gamification import CuratorLevel
+            next_level = db.query(CuratorLevel).filter(
+                CuratorLevel.level == stats.current_level + 1
+            ).first()
+            
+            if next_level is not None and stats.total_xp >= next_level.xp_required:  # type: ignore
+                stats.current_level = next_level.level  # type: ignore
+                stats.current_xp = stats.total_xp - next_level.xp_required  # type: ignore
+            
+            db.commit()
+        except Exception as stats_error:
+            print(f"Stats update error: {stats_error}")
+        
+        # Check and unlock badges for both liker and post owner
+        try:
+            BadgeService.check_and_unlock_badges(current_user_id)
+            if post.user_id != current_user_id:
+                BadgeService.check_and_unlock_badges(post.user_id)
+        except Exception as badge_error:
+            # Don't fail the request if badge checking fails
+            print(f"Badge unlock error: {badge_error}")
+        
         return jsonify({
             'message': 'Post liked successfully',
             'likes': post.likes
@@ -435,6 +535,22 @@ def unlike_post(post_id):
         
         db.commit()
         db.refresh(post)
+        
+        # Update post owner's stats
+        try:
+            from app.models.gamification import UserCuratorStats
+            stats = db.query(UserCuratorStats).filter_by(user_id=post.user_id).first()
+            if stats:
+                # Decrement likes received
+                stats.total_likes_received = max(0, stats.total_likes_received - 1)  # type: ignore
+                
+                # Remove XP (2 XP per like)
+                stats.total_xp = max(0, stats.total_xp - 2)  # type: ignore
+                stats.current_xp = max(0, stats.current_xp - 2)  # type: ignore
+                
+                db.commit()
+        except Exception as stats_error:
+            print(f"Stats update error: {stats_error}")
         
         return jsonify({
             'message': 'Post unliked successfully',
@@ -588,6 +704,42 @@ def add_comment(post_id):
         
         db.commit()
         db.refresh(comment)
+        
+        # Update post owner's stats
+        try:
+            from app.models.gamification import UserCuratorStats
+            stats = db.query(UserCuratorStats).filter_by(user_id=post.user_id).first()
+            if not stats:
+                stats = UserCuratorStats(user_id=post.user_id)
+                db.add(stats)
+            
+            # Increment comments received
+            stats.total_comments_received += 1  # type: ignore
+            
+            # Award XP to post owner (3 XP per comment received)
+            stats.total_xp += 3  # type: ignore
+            stats.current_xp += 3  # type: ignore
+            
+            # Check for level up
+            from app.models.gamification import CuratorLevel
+            next_level = db.query(CuratorLevel).filter(
+                CuratorLevel.level == stats.current_level + 1
+            ).first()
+            
+            if next_level is not None and stats.total_xp >= next_level.xp_required:  # type: ignore
+                stats.current_level = next_level.level  # type: ignore
+                stats.current_xp = stats.total_xp - next_level.xp_required  # type: ignore
+            
+            db.commit()
+        except Exception as stats_error:
+            print(f"Stats update error: {stats_error}")
+        
+        # Check badges for post owner
+        try:
+            if post.user_id != current_user_id:
+                BadgeService.check_and_unlock_badges(post.user_id)
+        except Exception as badge_error:
+            print(f"Badge unlock error: {badge_error}")
         
         return jsonify({
             'message': 'Comment added successfully',
