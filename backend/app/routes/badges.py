@@ -15,7 +15,10 @@ from typing import cast
 from app.database import get_db
 from app.models.user import User
 from app.models.share import Share
-from app.models.badge import Badge, UserBadge, CuratorLevel, seed_badges_and_levels
+
+### Unnecessary import - badge models are in gamification.py but we want to avoid circular imports
+# from app.models.badge import Badge, UserBadge, CuratorLevel, seed_badges_and_levels
+from app.models.gamification import Badge, UserBadge, CuratorLevel, seed_badges_and_levels
 
 badges_bp = Blueprint('badges', __name__)
 curator_bp = Blueprint('curator', __name__)
