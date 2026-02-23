@@ -6,4 +6,9 @@ from app.models.share import Share
 # __all__ = ['User', 'Movie', 'Album', 'Game', 'Book', 'Location', 'MovieType', 'GameDifficulty', 'Share', 'Badge', 'UserBadge', 'CuratorLevel']
 
 from app.models.gamification import Badge, UserBadge, CuratorLevel, UserCuratorStats
-__all__ = ['User', 'Movie', 'Album', 'Game', 'Book', 'Location', 'MovieType', 'GameDifficulty', 'Share', 'Badge', 'UserBadge', 'CuratorLevel', '`UserCuratorStats`']
+from app.models.room import AestheticRoom, RoomMember
+__all__ = [
+    'User', 'Movie', 'Album', 'Game', 'Book', 'Location', 'MovieType',
+    'GameDifficulty', 'Share', 'Badge', 'UserBadge', 'CuratorLevel',
+    'UserCuratorStats', 'AestheticRoom', 'RoomMember',
+]

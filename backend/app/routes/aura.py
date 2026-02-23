@@ -165,14 +165,13 @@ def update_aura_profile():
                 'message': 'User not found'
             }), 404
         
-        # Update aesthetic tags
+        # aesthetic_tags are computed automatically by the aura inference
+        # service and must not be set manually.
         if 'aestheticTags' in data:
-            if not isinstance(data['aestheticTags'], list):
-                return jsonify({
-                    'error': 'Bad Request',
-                    'message': 'aestheticTags must be an array'
-                }), 400
-            user.aesthetic_tags = data['aestheticTags']
+            return jsonify({
+                'error': 'Forbidden',
+                'message': 'aestheticTags are computed automatically and cannot be set manually'
+            }), 403
         
         # Update aura colors
         if 'auraColors' in data:
@@ -556,7 +555,14 @@ def create_share():
             print(f"❌ Badge unlock error: {badge_error}")
             import traceback
             traceback.print_exc()
-        
+
+        # Recompute aura profile (colors + tags) from latest activity
+        try:
+            from app.services.aura_inference import infer_aura_for_user
+            infer_aura_for_user(db, current_user_id)
+        except Exception as aura_error:
+            print(f"Aura inference error: {aura_error}")
+
         return jsonify(new_share.to_dict()), 201
     
     except Exception as e:

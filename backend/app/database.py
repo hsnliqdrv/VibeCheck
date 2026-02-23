@@ -18,8 +18,8 @@ def init_db(app):
     session_factory = sessionmaker(bind=engine)
     
     # Import all models to ensure they're registered
-    from app.models import user, content, share, post, badge, gamification
-    # from app.models import user, content, share, post, gamification
+    # NOTE: badge.py is legacy – gamification.py already defines the Badge table
+    from app.models import user, content, share, post, gamification, room
     
     # Create all tables
     Base.metadata.create_all(engine)

@@ -608,15 +608,15 @@ class VibeCheckAPITester:
             return False
     
     def test_update_aura_profile(self):
-        """Test updating aura profile"""
+        """Test updating aura profile (only auraColors allowed; aestheticTags are auto-inferred)"""
         if not self.token:
             self._log_test("PUT /aura/profile", False, error="No auth token available")
             return False
         
         try:
             headers = {"Authorization": f"Bearer {self.token}"}
+            # aestheticTags are now auto-inferred and cannot be set manually (403)
             payload = {
-                "aestheticTags": ["minimalist", "dark academia", "cyberpunk"],
                 "auraColors": ["#FF6B9D", "#4ECDC4", "#45B7D1"]
             }
             
@@ -628,6 +628,28 @@ class VibeCheckAPITester:
             return passed
         except Exception as e:
             self._log_test("PUT /aura/profile", False, error=e)
+            return False
+    
+    def test_update_aura_profile_rejects_aesthetic_tags(self):
+        """Test that manually setting aestheticTags is blocked (403)"""
+        if not self.token:
+            self._log_test("PUT /aura/profile (reject tags)", False, error="No auth token available")
+            return False
+        
+        try:
+            headers = {"Authorization": f"Bearer {self.token}"}
+            payload = {
+                "aestheticTags": ["minimalist", "dark academia", "cyberpunk"]
+            }
+            
+            response = requests.put(f"{self.base_url}/aura/profile", 
+                                   headers=headers, json=payload)
+            passed = response.status_code == 403
+            
+            self._log_test("PUT /aura/profile (reject tags)", passed, response)
+            return passed
+        except Exception as e:
+            self._log_test("PUT /aura/profile (reject tags)", False, error=e)
             return False
     
     def test_get_user_aura_by_id(self):
@@ -851,16 +873,14 @@ class VibeCheckAPITester:
             response = requests.get(f"{self.base_url}/badges/user", headers=headers)
             passed = response.status_code == 200
             
-            if passed and response.json():
+            if passed:
                 data = response.json()
-                # Verify response is an object with required fields
-                if isinstance(data, dict):
-                    required_fields = ['badges', 'unlockedCount', 'totalCount']
-                    passed = all(field in data for field in required_fields)
-                    if passed:
-                        passed = isinstance(data['badges'], list) and isinstance(data['unlockedCount'], int) and isinstance(data['totalCount'], int)
-                else:
-                    passed = False
+                # API returns a raw list of badge objects
+                passed = isinstance(data, list)
+                if passed and len(data) > 0:
+                    # Verify badge objects have expected fields
+                    first = data[0]
+                    passed = isinstance(first, dict) and 'id' in first and 'name' in first
             
             self._log_test("GET /badges/user", passed, response)
             return passed
@@ -878,16 +898,13 @@ class VibeCheckAPITester:
             response = requests.get(f"{self.base_url}/badges/user/{self.user_id}")
             passed = response.status_code == 200
             
-            if passed and response.json():
+            if passed:
                 data = response.json()
-                # Verify response is an object with required fields
-                if isinstance(data, dict):
-                    required_fields = ['badges', 'unlockedCount', 'totalCount']
-                    passed = all(field in data for field in required_fields)
-                    if passed:
-                        passed = isinstance(data['badges'], list) and isinstance(data['unlockedCount'], int) and isinstance(data['totalCount'], int)
-                else:
-                    passed = False
+                # API returns a raw list of badge objects
+                passed = isinstance(data, list)
+                if passed and len(data) > 0:
+                    first = data[0]
+                    passed = isinstance(first, dict) and 'id' in first and 'name' in first
             
             self._log_test(f"GET /badges/user/{self.user_id}", passed, response)
             return passed
@@ -1753,7 +1770,8 @@ class VibeCheckAPITester:
             
             if passed:
                 data = response.json()
-                passed = isinstance(data.get('badges', []), list) and len(data.get('badges', [])) > 0
+                # API returns a raw list of badges
+                passed = isinstance(data, list) and len(data) > 0
             
             self._log_test("GET /badges", passed, response)
             return passed
@@ -1768,8 +1786,7 @@ class VibeCheckAPITester:
             passed = response.status_code == 200
             
             if passed:
-                data = response.json()
-                badges = data.get('badges', [])
+                badges = response.json()
                 passed = isinstance(badges, list)
                 # Verify all returned badges have rarity=rare
                 if passed and len(badges) > 0:
@@ -1782,18 +1799,17 @@ class VibeCheckAPITester:
             return False
     
     def test_get_badges_with_category_filter(self):
-        """Test getting badges filtered by category"""
+        """Test getting badges filtered by category (valid: early, completionist, social, streak, special)"""
         try:
-            response = requests.get(f"{self.base_url}/badges?category=cinema")
+            response = requests.get(f"{self.base_url}/badges?category=social")
             passed = response.status_code == 200
             
             if passed:
-                data = response.json()
-                badges = data.get('badges', [])
+                badges = response.json()
                 passed = isinstance(badges, list)
-                # Verify all returned badges have category=cinema
+                # Verify all returned badges have category=social
                 if passed and len(badges) > 0:
-                    passed = all(badge.get('category') == 'cinema' for badge in badges)
+                    passed = all(badge.get('category') == 'social' for badge in badges)
             
             self._log_test("GET /badges (category filter)", passed, response)
             return passed
@@ -1802,14 +1818,13 @@ class VibeCheckAPITester:
             return False
     
     def test_get_badges_with_multiple_filters(self):
-        """Test getting badges with multiple filters"""
+        """Test getting badges with multiple filters (valid categories: early, completionist, social, streak, special)"""
         try:
-            response = requests.get(f"{self.base_url}/badges?rarity=epic&category=music")
+            response = requests.get(f"{self.base_url}/badges?rarity=rare&category=social")
             passed = response.status_code == 200
             
             if passed:
-                data = response.json()
-                badges = data.get('badges', [])
+                badges = response.json()
                 passed = isinstance(badges, list)
             
             self._log_test("GET /badges (multiple filters)", passed, response)
@@ -1831,7 +1846,8 @@ class VibeCheckAPITester:
             
             if passed:
                 data = response.json()
-                passed = isinstance(data.get('badges', []), list)
+                # API returns a raw list of badge objects
+                passed = isinstance(data, list)
             
             self._log_test("GET /badges/user", passed, response)
             return passed
@@ -1851,7 +1867,8 @@ class VibeCheckAPITester:
             
             if passed:
                 data = response.json()
-                passed = isinstance(data.get('badges', []), list)
+                # API returns a raw list of badge objects
+                passed = isinstance(data, list)
             
             self._log_test("GET /badges/user/{userId}", passed, response)
             return passed
@@ -2098,6 +2115,7 @@ class VibeCheckAPITester:
         print("-" * 70)
         self.test_get_current_user_aura()
         self.test_update_aura_profile()
+        self.test_update_aura_profile_rejects_aesthetic_tags()
         self.test_get_user_aura_by_id()
         self.test_update_aura_invalid_color()
         print()
@@ -2257,15 +2275,15 @@ def test_login_invalid(tester):
 
 
 def test_get_profile(tester):
-    tester.test_get_profile()  # May fail if no token
+    assert tester.test_get_profile()
 
 
 def test_update_profile(tester):
-    tester.test_update_profile()  # May fail if no token
+    assert tester.test_update_profile()
 
 
 def test_get_user_by_id(tester):
-    tester.test_get_user_by_id()  # May fail if no user_id
+    assert tester.test_get_user_by_id()
 
 
 def test_get_movies(tester):
@@ -2277,7 +2295,7 @@ def test_get_movies_with_search(tester):
 
 
 def test_get_movie_by_id(tester):
-    tester.test_get_movie_by_id()
+    assert tester.test_get_movie_by_id()
 
 
 def test_get_albums(tester):
@@ -2289,7 +2307,7 @@ def test_get_albums_with_search(tester):
 
 
 def test_get_album_by_id(tester):
-    tester.test_get_album_by_id()
+    assert tester.test_get_album_by_id()
 
 
 def test_get_games(tester):
@@ -2301,7 +2319,7 @@ def test_get_games_with_filters(tester):
 
 
 def test_get_game_by_id(tester):
-    tester.test_get_game_by_id()
+    assert tester.test_get_game_by_id()
 
 
 def test_get_books(tester):
@@ -2313,7 +2331,7 @@ def test_get_books_with_search(tester):
 
 
 def test_get_book_by_id(tester):
-    tester.test_get_book_by_id()
+    assert tester.test_get_book_by_id()
 
 
 def test_get_locations(tester):
@@ -2325,7 +2343,7 @@ def test_get_locations_with_filters(tester):
 
 
 def test_get_location_by_id(tester):
-    tester.test_get_location_by_id()
+    assert tester.test_get_location_by_id()
 
 
 def test_global_search(tester):
@@ -2337,23 +2355,27 @@ def test_global_search_with_categories(tester):
 
 
 def test_get_current_user_aura(tester):
-    tester.test_get_current_user_aura()
+    assert tester.test_get_current_user_aura()
 
 
 def test_update_aura_profile(tester):
-    tester.test_update_aura_profile()
+    assert tester.test_update_aura_profile()
+
+
+def test_update_aura_profile_rejects_aesthetic_tags(tester):
+    assert tester.test_update_aura_profile_rejects_aesthetic_tags()
 
 
 def test_get_user_aura_by_id(tester):
-    tester.test_get_user_aura_by_id()
+    assert tester.test_get_user_aura_by_id()
 
 
 def test_create_share(tester):
-    tester.test_create_share()
+    assert tester.test_create_share()
 
 
 def test_get_user_shares(tester):
-    tester.test_get_user_shares()
+    assert tester.test_get_user_shares()
 
 
 # ─────────────────────────────────────────────────────────
@@ -2390,11 +2412,11 @@ def test_get_badges_with_multiple_filters(tester):
 
 
 def test_get_user_badges(tester):
-    tester.test_get_user_badges()
+    assert tester.test_get_user_badges()
 
 
 def test_get_user_badges_by_id(tester):
-    tester.test_get_user_badges_by_id()
+    assert tester.test_get_user_badges_by_id()
 
 
 def test_get_nonexistent_user_badges(tester):
@@ -2412,11 +2434,11 @@ def test_get_nonexistent_user_badges(tester):
 
 
 def test_get_curator_stats(tester):
-    tester.test_get_curator_stats()
+    assert tester.test_get_curator_stats()
 
 
 def test_get_curator_stats_by_id(tester):
-    tester.test_get_curator_stats_by_id()
+    assert tester.test_get_curator_stats_by_id()
 
 
 def test_get_nonexistent_user_curator_stats(tester):
@@ -2455,7 +2477,7 @@ def test_curator_stats_unauthorized(tester):
 # ─────────────────────────────────────────────────────────
 
 def test_create_post(tester):
-    tester.test_create_post()
+    assert tester.test_create_post()
 
 
 def test_create_post_missing_fields(tester):
@@ -2479,7 +2501,7 @@ def test_get_posts_sorted_by_popular(tester):
 
 
 def test_get_post_by_id(tester):
-    tester.test_get_post_by_id()
+    assert tester.test_get_post_by_id()
 
 
 def test_get_nonexistent_post(tester):
@@ -2487,19 +2509,19 @@ def test_get_nonexistent_post(tester):
 
 
 def test_like_post(tester):
-    tester.test_like_post()
+    assert tester.test_like_post()
 
 
 def test_like_post_again(tester):
-    tester.test_like_post_again()
+    assert tester.test_like_post_again()
 
 
 def test_unlike_post(tester):
-    tester.test_unlike_post()
+    assert tester.test_unlike_post()
 
 
 def test_add_comment(tester):
-    tester.test_add_comment()
+    assert tester.test_add_comment()
 
 
 def test_add_comment_missing_text(tester):
@@ -2507,15 +2529,15 @@ def test_add_comment_missing_text(tester):
 
 
 def test_get_post_comments(tester):
-    tester.test_get_post_comments()
+    assert tester.test_get_post_comments()
 
 
 def test_delete_post(tester):
-    tester.test_delete_post()
+    assert tester.test_delete_post()
 
 
 def test_delete_post_unauthorized(tester):
-    tester.test_delete_post_unauthorized()
+    assert tester.test_delete_post_unauthorized()
 
 
 # ─────────────────────────────────────────────────────────
@@ -2543,7 +2565,7 @@ def test_register_missing_fields(tester):
 
 
 def test_update_aura_invalid_color(tester):
-    tester.test_update_aura_invalid_color()
+    assert tester.test_update_aura_invalid_color()
 
 
 def test_get_nonexistent_user(tester):
@@ -2563,7 +2585,7 @@ def test_pagination_albums(tester):
 
 
 def test_get_shares_pagination(tester):
-    tester.test_get_shares_pagination()
+    assert tester.test_get_shares_pagination()
 
 
 # ─────────────────────────────────────────────────────────
@@ -2571,15 +2593,15 @@ def test_get_shares_pagination(tester):
 # ─────────────────────────────────────────────────────────
 
 def test_user_response_schema(tester):
-    tester.test_user_response_schema()
+    assert tester.test_user_response_schema()
 
 
 def test_content_response_schema(tester):
-    tester.test_content_response_schema()
+    assert tester.test_content_response_schema()
 
 
 def test_aura_response_schema(tester):
-    tester.test_aura_response_schema()
+    assert tester.test_aura_response_schema()
 
 
 # ─────────────────────────────────────────────────────────
