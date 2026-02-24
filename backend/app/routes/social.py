@@ -4,6 +4,7 @@ from sqlalchemy import desc
 from app.database import get_db
 from app.models.user import User
 from app.models.post import Post, Comment, PostLike
+from app.models.room import AestheticRoom, RoomMember
 from app.services.badge_service import BadgeService
 
 social_bp = Blueprint('social', __name__)
@@ -216,7 +217,14 @@ def create_community_post():
         except Exception as badge_error:
             # Don't fail the request if badge checking fails
             print(f"Badge unlock error: {badge_error}")
-        
+
+        # Recompute aura profile (colors + tags) from latest activity
+        try:
+            from app.services.aura_inference import infer_aura_for_user
+            infer_aura_for_user(db, current_user_id)
+        except Exception as aura_error:
+            print(f"Aura inference error: {aura_error}")
+
         return jsonify({
             'message': 'Post created successfully',
             'post': post.to_dict()
@@ -756,3 +764,401 @@ def add_comment(post_id):
             'error': 'Internal Server Error',
             'message': str(e)
         }), 500
+
+
+# ──────────────────────────────────────────────
+# ROOM ENDPOINTS
+# ──────────────────────────────────────────────
+
+@social_bp.route('/rooms', methods=['GET'])
+def get_rooms():
+    """
+    Get aesthetic rooms
+    ---
+    tags:
+      - Social
+    parameters:
+      - name: trending
+        in: query
+        type: boolean
+        description: Filter to only trending rooms
+      - name: limit
+        in: query
+        type: integer
+        default: 20
+      - name: offset
+        in: query
+        type: integer
+        default: 0
+    responses:
+      200:
+        description: Aesthetic rooms list
+      400:
+        description: Bad request
+    """
+    try:
+        db = get_db()
+
+        trending_param = request.args.get('trending')
+        limit = min(int(request.args.get('limit', 20)), 100)
+        offset = int(request.args.get('offset', 0))
+
+        query = db.query(AestheticRoom)
+        if trending_param is not None:
+            query = query.filter_by(trending=(trending_param.lower() == 'true'))
+
+        total = query.count()
+        rooms = query.order_by(desc(AestheticRoom.member_count)).limit(limit).offset(offset).all()
+
+        return jsonify({
+            'data': [r.to_dict() for r in rooms],
+            'total': total,
+            'limit': limit,
+            'offset': offset,
+        }), 200
+
+    except ValueError:
+        return jsonify({'error': 'Bad Request', 'message': 'Invalid limit or offset'}), 400
+    except Exception as e:
+        return jsonify({'error': 'Internal Server Error', 'message': str(e)}), 500
+
+
+@social_bp.route('/rooms/<string:room_id>', methods=['GET'])
+def get_room(room_id):
+    """
+    Get room details
+    ---
+    tags:
+      - Social
+    parameters:
+      - name: room_id
+        in: path
+        type: string
+        required: true
+    responses:
+      200:
+        description: Room details
+      404:
+        description: Room not found
+    """
+    try:
+        db = get_db()
+        room = db.query(AestheticRoom).filter_by(id=room_id).first()
+        if not room:
+            return jsonify({'error': 'Not Found', 'message': 'Room not found'}), 404
+        return jsonify(room.to_dict()), 200
+    except Exception as e:
+        return jsonify({'error': 'Internal Server Error', 'message': str(e)}), 500
+
+
+@social_bp.route('/rooms/<string:room_id>/posts', methods=['GET'])
+def get_room_posts(room_id):
+    """
+    Get posts in a room
+    ---
+    tags:
+      - Social
+    parameters:
+      - name: room_id
+        in: path
+        type: string
+        required: true
+      - name: limit
+        in: query
+        type: integer
+        default: 20
+      - name: offset
+        in: query
+        type: integer
+        default: 0
+    responses:
+      200:
+        description: Room posts list
+      404:
+        description: Room not found
+    """
+    try:
+        db = get_db()
+
+        room = db.query(AestheticRoom).filter_by(id=room_id).first()
+        if not room:
+            return jsonify({'error': 'Not Found', 'message': 'Room not found'}), 404
+
+        limit = min(int(request.args.get('limit', 20)), 100)
+        offset = int(request.args.get('offset', 0))
+
+        query = db.query(Post).filter_by(room_id=room_id).order_by(desc(Post.created_at))
+        total = query.count()
+        posts = query.limit(limit).offset(offset).all()
+
+        return jsonify({
+            'data': [p.to_dict() for p in posts],
+            'total': total,
+            'limit': limit,
+            'offset': offset,
+        }), 200
+
+    except ValueError:
+        return jsonify({'error': 'Bad Request', 'message': 'Invalid limit or offset'}), 400
+    except Exception as e:
+        return jsonify({'error': 'Internal Server Error', 'message': str(e)}), 500
+
+
+@social_bp.route('/rooms/<string:room_id>/posts', methods=['POST'])
+@jwt_required()
+def create_room_post(room_id):
+    """
+    Create a post inside a specific room
+    ---
+    tags:
+      - Social
+    security:
+      - Bearer: []
+    parameters:
+      - name: room_id
+        in: path
+        type: string
+        required: true
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          required:
+            - category
+            - title
+            - image
+          properties:
+            category:
+              type: string
+              enum: [cinema, music, games, books, travel]
+            title:
+              type: string
+            image:
+              type: string
+            dominantColor:
+              type: string
+    responses:
+      201:
+        description: Post created
+      400:
+        description: Bad request
+      401:
+        description: Unauthorized
+      404:
+        description: Room not found
+    """
+    db = None
+    try:
+        current_user_id = get_jwt_identity()
+        db = get_db()
+
+        room = db.query(AestheticRoom).filter_by(id=room_id).first()
+        if not room:
+            return jsonify({'error': 'Not Found', 'message': 'Room not found'}), 404
+
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'Bad Request', 'message': 'Request body is required'}), 400
+
+        required_fields = ['category', 'title', 'image']
+        for field in required_fields:
+            if field not in data or not data[field]:
+                return jsonify({'error': 'Bad Request', 'message': f'Field "{field}" is required'}), 400
+
+        valid_categories = ['cinema', 'music', 'games', 'books', 'travel']
+        if data['category'] not in valid_categories:
+            return jsonify({
+                'error': 'Bad Request',
+                'message': f'Invalid category. Must be one of: {", ".join(valid_categories)}'
+            }), 400
+
+        if len(data['title']) > 255:
+            return jsonify({'error': 'Bad Request', 'message': 'Title must be 255 characters or less'}), 400
+
+        post = Post(
+            user_id=current_user_id,
+            category=data['category'],
+            title=data['title'],
+            image=data['image'],
+            dominant_color=data.get('dominantColor'),
+            room_id=room_id,
+        )
+        db.add(post)
+
+        # Update room post count
+        room.post_count += 1  # type: ignore
+
+        db.commit()
+        db.refresh(post)
+
+        # Update user curator stats
+        try:
+            from app.models.gamification import UserCuratorStats, CuratorLevel
+            stats = db.query(UserCuratorStats).filter_by(user_id=current_user_id).first()
+            if not stats:
+                stats = UserCuratorStats(user_id=current_user_id)
+                db.add(stats)
+            stats.total_posts += 1  # type: ignore
+            stats.total_xp += 5  # type: ignore
+            stats.current_xp += 5  # type: ignore
+            next_level = db.query(CuratorLevel).filter(
+                CuratorLevel.level == stats.current_level + 1
+            ).first()
+            if next_level is not None and stats.total_xp >= next_level.xp_required:  # type: ignore
+                stats.current_level = next_level.level  # type: ignore
+                stats.current_xp = stats.total_xp - next_level.xp_required  # type: ignore
+            db.commit()
+        except Exception as stats_error:
+            print(f"Stats update error: {stats_error}")
+
+        # Check badges
+        try:
+            BadgeService.check_and_unlock_badges(current_user_id)
+        except Exception as badge_error:
+            print(f"Badge unlock error: {badge_error}")
+
+        # Recompute aura profile
+        try:
+            from app.services.aura_inference import infer_aura_for_user
+            infer_aura_for_user(db, current_user_id)
+        except Exception as aura_error:
+            print(f"Aura inference error: {aura_error}")
+
+        return jsonify({'message': 'Post created successfully', 'post': post.to_dict()}), 201
+
+    except Exception as e:
+        if db is not None:
+            try:
+                db.rollback()
+            except Exception:
+                pass
+        return jsonify({'error': 'Internal Server Error', 'message': str(e)}), 500
+
+
+@social_bp.route('/rooms/<string:room_id>/join', methods=['POST'])
+@jwt_required()
+def join_room(room_id):
+    """
+    Join an aesthetic room
+    ---
+    tags:
+      - Social
+    security:
+      - Bearer: []
+    parameters:
+      - name: room_id
+        in: path
+        type: string
+        required: true
+    responses:
+      200:
+        description: Joined room
+      401:
+        description: Unauthorized
+      404:
+        description: Room not found
+    """
+    db = None
+    try:
+        current_user_id = get_jwt_identity()
+        db = get_db()
+
+        room = db.query(AestheticRoom).filter_by(id=room_id).first()
+        if not room:
+            return jsonify({'error': 'Not Found', 'message': 'Room not found'}), 404
+
+        # Idempotent – silently succeed if already a member
+        existing = db.query(RoomMember).filter_by(
+            room_id=room_id, user_id=current_user_id
+        ).first()
+
+        if not existing:
+            membership = RoomMember(room_id=room_id, user_id=current_user_id)
+            db.add(membership)
+            room.member_count += 1  # type: ignore
+
+            # Update gamification stats
+            try:
+                from app.models.gamification import UserCuratorStats
+                stats = db.query(UserCuratorStats).filter_by(user_id=current_user_id).first()
+                if not stats:
+                    stats = UserCuratorStats(user_id=current_user_id)
+                    db.add(stats)
+                stats.rooms_joined += 1  # type: ignore
+            except Exception as stats_error:
+                print(f"Stats update error: {stats_error}")
+
+            db.commit()
+
+        return jsonify(room.to_dict()), 200
+
+    except Exception as e:
+        if db is not None:
+            try:
+                db.rollback()
+            except Exception:
+                pass
+        return jsonify({'error': 'Internal Server Error', 'message': str(e)}), 500
+
+
+@social_bp.route('/rooms/<string:room_id>/leave', methods=['POST'])
+@jwt_required()
+def leave_room(room_id):
+    """
+    Leave an aesthetic room
+    ---
+    tags:
+      - Social
+    security:
+      - Bearer: []
+    parameters:
+      - name: room_id
+        in: path
+        type: string
+        required: true
+    responses:
+      204:
+        description: Left room
+      401:
+        description: Unauthorized
+      404:
+        description: Room not found
+    """
+    db = None
+    try:
+        current_user_id = get_jwt_identity()
+        db = get_db()
+
+        room = db.query(AestheticRoom).filter_by(id=room_id).first()
+        if not room:
+            return jsonify({'error': 'Not Found', 'message': 'Room not found'}), 404
+
+        membership = db.query(RoomMember).filter_by(
+            room_id=room_id, user_id=current_user_id
+        ).first()
+
+        if membership:
+            db.delete(membership)
+            room.member_count = max(0, room.member_count - 1)  # type: ignore
+
+            # Update gamification stats
+            try:
+                from app.models.gamification import UserCuratorStats
+                stats = db.query(UserCuratorStats).filter_by(user_id=current_user_id).first()
+                if stats:
+                    stats.rooms_joined = max(0, stats.rooms_joined - 1)  # type: ignore
+            except Exception as stats_error:
+                print(f"Stats update error: {stats_error}")
+
+            db.commit()
+
+        return '', 204
+
+    except Exception as e:
+        if db is not None:
+            try:
+                db.rollback()
+            except Exception:
+                pass
+        return jsonify({'error': 'Internal Server Error', 'message': str(e)}), 500

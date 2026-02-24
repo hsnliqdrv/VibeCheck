@@ -90,7 +90,10 @@ def create_app():
     from app.routes.aura import aura_bp
     from app.routes.search import search_bp
     from app.routes.social import social_bp
+    
+    # from app.routes.badges import badges_bp, curator_bp
     from app.routes.gamification import gamification_bp
+
     app.register_blueprint(auth_bp, url_prefix='/api/v1/auth')
     app.register_blueprint(content_bp, url_prefix='/api/v1/content')
     app.register_blueprint(user_profile_bp, url_prefix='/api/v1/users')

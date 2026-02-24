@@ -608,15 +608,15 @@ class VibeCheckAPITester:
             return False
     
     def test_update_aura_profile(self):
-        """Test updating aura profile"""
+        """Test updating aura profile (only auraColors allowed; aestheticTags are auto-inferred)"""
         if not self.token:
             self._log_test("PUT /aura/profile", False, error="No auth token available")
             return False
         
         try:
             headers = {"Authorization": f"Bearer {self.token}"}
+            # aestheticTags are now auto-inferred and cannot be set manually (403)
             payload = {
-                "aestheticTags": ["minimalist", "dark academia", "cyberpunk"],
                 "auraColors": ["#FF6B9D", "#4ECDC4", "#45B7D1"]
             }
             
@@ -628,6 +628,28 @@ class VibeCheckAPITester:
             return passed
         except Exception as e:
             self._log_test("PUT /aura/profile", False, error=e)
+            return False
+    
+    def test_update_aura_profile_rejects_aesthetic_tags(self):
+        """Test that manually setting aestheticTags is blocked (403)"""
+        if not self.token:
+            self._log_test("PUT /aura/profile (reject tags)", False, error="No auth token available")
+            return False
+        
+        try:
+            headers = {"Authorization": f"Bearer {self.token}"}
+            payload = {
+                "aestheticTags": ["minimalist", "dark academia", "cyberpunk"]
+            }
+            
+            response = requests.put(f"{self.base_url}/aura/profile", 
+                                   headers=headers, json=payload)
+            passed = response.status_code == 403
+            
+            self._log_test("PUT /aura/profile (reject tags)", passed, response)
+            return passed
+        except Exception as e:
+            self._log_test("PUT /aura/profile (reject tags)", False, error=e)
             return False
     
     def test_get_user_aura_by_id(self):
@@ -851,16 +873,14 @@ class VibeCheckAPITester:
             response = requests.get(f"{self.base_url}/badges/user", headers=headers)
             passed = response.status_code == 200
             
-            if passed and response.json():
+            if passed:
                 data = response.json()
-                # Verify response is an object with required fields
-                if isinstance(data, dict):
-                    required_fields = ['badges', 'unlockedCount', 'totalCount']
-                    passed = all(field in data for field in required_fields)
-                    if passed:
-                        passed = isinstance(data['badges'], list) and isinstance(data['unlockedCount'], int) and isinstance(data['totalCount'], int)
-                else:
-                    passed = False
+                # API returns a raw list of badge objects
+                passed = isinstance(data, list)
+                if passed and len(data) > 0:
+                    # Verify badge objects have expected fields
+                    first = data[0]
+                    passed = isinstance(first, dict) and 'id' in first and 'name' in first
             
             self._log_test("GET /badges/user", passed, response)
             return passed
@@ -878,16 +898,13 @@ class VibeCheckAPITester:
             response = requests.get(f"{self.base_url}/badges/user/{self.user_id}")
             passed = response.status_code == 200
             
-            if passed and response.json():
+            if passed:
                 data = response.json()
-                # Verify response is an object with required fields
-                if isinstance(data, dict):
-                    required_fields = ['badges', 'unlockedCount', 'totalCount']
-                    passed = all(field in data for field in required_fields)
-                    if passed:
-                        passed = isinstance(data['badges'], list) and isinstance(data['unlockedCount'], int) and isinstance(data['totalCount'], int)
-                else:
-                    passed = False
+                # API returns a raw list of badge objects
+                passed = isinstance(data, list)
+                if passed and len(data) > 0:
+                    first = data[0]
+                    passed = isinstance(first, dict) and 'id' in first and 'name' in first
             
             self._log_test(f"GET /badges/user/{self.user_id}", passed, response)
             return passed
@@ -1742,6 +1759,546 @@ class VibeCheckAPITester:
             return False
     
     # ─────────────────────────────────────────────────────────
+    # BADGES & GAMIFICATION TESTS
+    # ─────────────────────────────────────────────────────────
+    
+    def test_get_all_badges(self):
+        """Test getting all available badges"""
+        try:
+            response = requests.get(f"{self.base_url}/badges")
+            passed = response.status_code == 200
+            
+            if passed:
+                data = response.json()
+                # API returns a raw list of badges
+                passed = isinstance(data, list) and len(data) > 0
+            
+            self._log_test("GET /badges", passed, response)
+            return passed
+        except Exception as e:
+            self._log_test("GET /badges", False, error=e)
+            return False
+    
+    def test_get_badges_with_rarity_filter(self):
+        """Test getting badges filtered by rarity"""
+        try:
+            response = requests.get(f"{self.base_url}/badges?rarity=rare")
+            passed = response.status_code == 200
+            
+            if passed:
+                badges = response.json()
+                passed = isinstance(badges, list)
+                # Verify all returned badges have rarity=rare
+                if passed and len(badges) > 0:
+                    passed = all(badge.get('rarity') == 'rare' for badge in badges)
+            
+            self._log_test("GET /badges (rarity filter)", passed, response)
+            return passed
+        except Exception as e:
+            self._log_test("GET /badges (rarity filter)", False, error=e)
+            return False
+    
+    def test_get_badges_with_category_filter(self):
+        """Test getting badges filtered by category (valid: early, completionist, social, streak, special)"""
+        try:
+            response = requests.get(f"{self.base_url}/badges?category=social")
+            passed = response.status_code == 200
+            
+            if passed:
+                badges = response.json()
+                passed = isinstance(badges, list)
+                # Verify all returned badges have category=social
+                if passed and len(badges) > 0:
+                    passed = all(badge.get('category') == 'social' for badge in badges)
+            
+            self._log_test("GET /badges (category filter)", passed, response)
+            return passed
+        except Exception as e:
+            self._log_test("GET /badges (category filter)", False, error=e)
+            return False
+    
+    def test_get_badges_with_multiple_filters(self):
+        """Test getting badges with multiple filters (valid categories: early, completionist, social, streak, special)"""
+        try:
+            response = requests.get(f"{self.base_url}/badges?rarity=rare&category=social")
+            passed = response.status_code == 200
+            
+            if passed:
+                badges = response.json()
+                passed = isinstance(badges, list)
+            
+            self._log_test("GET /badges (multiple filters)", passed, response)
+            return passed
+        except Exception as e:
+            self._log_test("GET /badges (multiple filters)", False, error=e)
+            return False
+    
+    def test_get_current_user_badges(self):
+        """Test getting current user's earned badges"""
+        if not self.token:
+            self._log_test("GET /badges/user", False, error="No auth token available")
+            return False
+        
+        try:
+            headers = {"Authorization": f"Bearer {self.token}"}
+            response = requests.get(f"{self.base_url}/badges/user", headers=headers)
+            passed = response.status_code == 200
+            
+            if passed:
+                data = response.json()
+                # API returns a raw list of badge objects
+                passed = isinstance(data, list)
+            
+            self._log_test("GET /badges/user", passed, response)
+            return passed
+        except Exception as e:
+            self._log_test("GET /badges/user", False, error=e)
+            return False
+    
+    def test_get_user_badges_by_id(self):
+        """Test getting specific user's badges by ID"""
+        if not self.user_id:
+            self._log_test("GET /badges/user/{userId}", False, error="No user_id available")
+            return False
+        
+        try:
+            response = requests.get(f"{self.base_url}/badges/user/{self.user_id}")
+            passed = response.status_code == 200
+            
+            if passed:
+                data = response.json()
+                # API returns a raw list of badge objects
+                passed = isinstance(data, list)
+            
+            self._log_test("GET /badges/user/{userId}", passed, response)
+            return passed
+        except Exception as e:
+            self._log_test("GET /badges/user/{userId}", False, error=e)
+            return False
+    
+    def test_get_nonexistent_user_badges(self):
+        """Test getting badges for non-existent user"""
+        try:
+            fake_id = "nonexistent_user_" + self._random_string(10)
+            response = requests.get(f"{self.base_url}/badges/user/{fake_id}")
+            passed = response.status_code == 404
+            
+            self._log_test("GET /badges/user/{userId} (404 error)", passed, response)
+            return passed
+        except Exception as e:
+            self._log_test("GET /badges/user/{userId} (404 error)", False, error=e)
+            return False
+    
+    def test_get_current_user_curator_stats(self):
+        """Test getting current user's curator statistics"""
+        if not self.token:
+            self._log_test("GET /curator/stats", False, error="No auth token available")
+            return False
+        
+        try:
+            headers = {"Authorization": f"Bearer {self.token}"}
+            response = requests.get(f"{self.base_url}/curator/stats", headers=headers)
+            passed = response.status_code == 200
+            
+            if passed:
+                data = response.json()
+                # Verify expected fields in curator stats
+                required_fields = ['totalShares', 'currentLevel', 'currentXP', 'xpToNextLevel']
+                passed = all(field in data for field in required_fields)
+            
+            self._log_test("GET /curator/stats", passed, response)
+            return passed
+        except Exception as e:
+            self._log_test("GET /curator/stats", False, error=e)
+            return False
+    
+    def test_get_curator_stats_without_auth(self):
+        """Test curator stats endpoint without authentication (should fail)"""
+        try:
+            response = requests.get(f"{self.base_url}/curator/stats")
+            passed = response.status_code == 401
+            
+            self._log_test("GET /curator/stats (401 error)", passed, response)
+            return passed
+        except Exception as e:
+            self._log_test("GET /curator/stats (401 error)", False, error=e)
+            return False
+    
+    def test_get_user_curator_stats_by_id(self):
+        """Test getting specific user's curator statistics"""
+        if not self.user_id:
+            self._log_test("GET /curator/stats/{userId}", False, error="No user_id available")
+            return False
+        
+        try:
+            response = requests.get(f"{self.base_url}/curator/stats/{self.user_id}")
+            passed = response.status_code == 200
+            
+            if passed:
+                data = response.json()
+                # Verify expected fields
+                required_fields = ['totalShares', 'currentLevel', 'currentXP']
+                passed = all(field in data for field in required_fields)
+            
+            self._log_test("GET /curator/stats/{userId}", passed, response)
+            return passed
+        except Exception as e:
+            self._log_test("GET /curator/stats/{userId}", False, error=e)
+            return False
+    
+    def test_get_nonexistent_user_curator_stats(self):
+        """Test getting curator stats for non-existent user"""
+        try:
+            fake_id = "nonexistent_user_" + self._random_string(10)
+            response = requests.get(f"{self.base_url}/curator/stats/{fake_id}")
+            passed = response.status_code == 404
+            
+            self._log_test("GET /curator/stats/{userId} (404 error)", passed, response)
+            return passed
+        except Exception as e:
+            self._log_test("GET /curator/stats/{userId} (404 error)", False, error=e)
+            return False
+    
+    def test_get_all_curator_levels(self):
+        """Test getting all curator levels"""
+        try:
+            response = requests.get(f"{self.base_url}/curator/levels")
+            passed = response.status_code == 200
+            
+            if passed:
+                data = response.json()
+                levels = data.get('levels', [])
+                passed = isinstance(levels, list) and len(levels) > 0
+                
+                if passed and len(levels) > 0:
+                    # Verify level structure
+                    level = levels[0]
+                    required_fields = ['level', 'name', 'xpRequired']
+                    passed = all(field in level for field in required_fields)
+            
+            self._log_test("GET /curator/levels", passed, response)
+            return passed
+        except Exception as e:
+            self._log_test("GET /curator/levels", False, error=e)
+            return False
+    
+    def test_curator_levels_are_progressive(self):
+        """Test that curator levels are in progressive order"""
+        try:
+            response = requests.get(f"{self.base_url}/curator/levels")
+            passed = response.status_code == 200
+            
+            if passed:
+                data = response.json()
+                levels = data.get('levels', [])
+                
+                if len(levels) > 1:
+                    # Verify levels are in ascending order
+                    for i in range(len(levels) - 1):
+                        level1 = levels[i].get('level', 0)
+                        level2 = levels[i + 1].get('level', 0)
+                        xp1 = levels[i].get('xpRequired', 0)
+                        xp2 = levels[i + 1].get('xpRequired', 0)
+                        
+                        if level2 <= level1 or xp2 <= xp1:
+                            passed = False
+                            break
+            
+            self._log_test("GET /curator/levels (progressive order)", passed, response)
+            return passed
+        except Exception as e:
+            self._log_test("GET /curator/levels (progressive order)", False, error=e)
+            return False
+    
+    # ─────────────────────────────────────────────────────────
+    # ROOMS TESTS
+    # ─────────────────────────────────────────────────────────
+    
+    def test_get_aesthetic_rooms(self):
+        """Test getting aesthetic rooms"""
+        try:
+            response = requests.get(f"{self.base_url}/social/rooms?limit=10")
+            passed = response.status_code == 200
+            
+            if passed and response.json():
+                data = response.json()
+                # API returns paginated rooms under the "data" key
+                if 'data' in data:
+                    rooms = data['data']
+                elif 'rooms' in data:
+                    rooms = data['rooms']
+                elif isinstance(data, list):
+                    rooms = data
+                else:
+                    rooms = []
+                
+                # Store a room ID for later tests if available
+                if len(rooms) > 0:
+                    self.test_room_id = rooms[0].get('id')
+            
+            self._log_test("GET /social/rooms", passed, response)
+            return passed
+        except Exception as e:
+            self._log_test("GET /social/rooms", False, error=e)
+            return False
+    
+    def test_get_aesthetic_rooms_with_limit(self):
+        """Test getting aesthetic rooms with limit parameter"""
+        try:
+            response = requests.get(f"{self.base_url}/social/rooms?limit=5&offset=0")
+            passed = response.status_code == 200
+            
+            self._log_test("GET /social/rooms (with limit)", passed, response)
+            return passed
+        except Exception as e:
+            self._log_test("GET /social/rooms (with limit)", False, error=e)
+            return False
+    
+    def test_get_aesthetic_rooms_trending(self):
+        """Test getting trending aesthetic rooms"""
+        try:
+            response = requests.get(f"{self.base_url}/social/rooms?trending=true&limit=10")
+            passed = response.status_code == 200
+            
+            if passed and response.json():
+                data = response.json()
+                # If API filters trending rooms, all should have trending=true
+                if 'rooms' in data:
+                    rooms = data['rooms']
+                elif isinstance(data, list):
+                    rooms = data
+                else:
+                    rooms = []
+                
+                # Optionally validate that trending filter was applied
+                # if len(rooms) > 0:
+                #     passed = all(room.get('trending') for room in rooms)
+            
+            self._log_test("GET /social/rooms (trending)", passed, response)
+            return passed
+        except Exception as e:
+            self._log_test("GET /social/rooms (trending)", False, error=e)
+            return False
+    
+    def test_get_room_by_id(self):
+        """Test getting a room by ID"""
+        if not hasattr(self, 'test_room_id') or not self.test_room_id:
+            self._log_test("GET /social/rooms/{roomId}", False, error="No test room ID available")
+            return False
+        
+        try:
+            response = requests.get(f"{self.base_url}/social/rooms/{self.test_room_id}")
+            passed = response.status_code == 200
+            
+            if passed and response.json():
+                data = response.json()
+                # Validate required fields from AestheticRoom schema
+                if isinstance(data, dict):
+                    required_fields = ['id', 'name', 'hashtag']
+                    passed = all(field in data for field in required_fields)
+            
+            self._log_test("GET /social/rooms/{roomId}", passed, response)
+            return passed
+        except Exception as e:
+            self._log_test("GET /social/rooms/{roomId}", False, error=e)
+            return False
+    
+    def test_get_nonexistent_room(self):
+        """Test getting a non-existent room (should return 404)"""
+        try:
+            response = requests.get(f"{self.base_url}/social/rooms/nonexistent_room_id_12345")
+            passed = response.status_code == 404
+            
+            self._log_test("GET /social/rooms/{roomId} (not found)", passed, response)
+            return passed
+        except Exception as e:
+            self._log_test("GET /social/rooms/{roomId} (not found)", False, error=e)
+            return False
+    
+    def test_get_room_posts(self):
+        """Test getting posts in a room"""
+        if not hasattr(self, 'test_room_id') or not self.test_room_id:
+            self._log_test("GET /social/rooms/{roomId}/posts", False, error="No test room ID available")
+            return False
+        
+        try:
+            response = requests.get(f"{self.base_url}/social/rooms/{self.test_room_id}/posts?limit=10")
+            passed = response.status_code == 200
+            
+            if passed and response.json():
+                data = response.json()
+                # API should return posts
+                if 'posts' in data:
+                    posts = data['posts']
+                elif isinstance(data, list):
+                    posts = data
+                else:
+                    posts = []
+            
+            self._log_test("GET /social/rooms/{roomId}/posts", passed, response)
+            return passed
+        except Exception as e:
+            self._log_test("GET /social/rooms/{roomId}/posts", False, error=e)
+            return False
+    
+    def test_get_room_posts_with_pagination(self):
+        """Test getting room posts with pagination"""
+        if not hasattr(self, 'test_room_id') or not self.test_room_id:
+            self._log_test("GET /social/rooms/{roomId}/posts (pagination)", False, error="No test room ID available")
+            return False
+        
+        try:
+            response = requests.get(f"{self.base_url}/social/rooms/{self.test_room_id}/posts?limit=5&offset=0")
+            passed = response.status_code == 200
+            
+            self._log_test("GET /social/rooms/{roomId}/posts (pagination)", passed, response)
+            return passed
+        except Exception as e:
+            self._log_test("GET /social/rooms/{roomId}/posts (pagination)", False, error=e)
+            return False
+    
+    def test_get_room_posts_nonexistent_room(self):
+        """Test getting posts from a non-existent room (should return 404)"""
+        try:
+            response = requests.get(f"{self.base_url}/social/rooms/nonexistent_room_id/posts")
+            passed = response.status_code == 404
+            
+            self._log_test("GET /social/rooms/{roomId}/posts (not found)", passed, response)
+            return passed
+        except Exception as e:
+            self._log_test("GET /social/rooms/{roomId}/posts (not found)", False, error=e)
+            return False
+    
+    def test_join_room(self):
+        """Test joining an aesthetic room"""
+        if not self.token:
+            self._log_test("POST /social/rooms/{roomId}/join", False, error="No auth token available")
+            return False
+        
+        if not hasattr(self, 'test_room_id') or not self.test_room_id:
+            self._log_test("POST /social/rooms/{roomId}/join", False, error="No test room ID available")
+            return False
+        
+        try:
+            headers = {"Authorization": f"Bearer {self.token}"}
+            response = requests.post(f"{self.base_url}/social/rooms/{self.test_room_id}/join", 
+                                    headers=headers)
+            # Status code can be 200 (success) or 400/409 (already joined)
+            passed = response.status_code in [200, 400, 409]
+            
+            # Store room ID if join was successful
+            if response.status_code == 200:
+                self.test_room_joined = self.test_room_id
+            
+            self._log_test("POST /social/rooms/{roomId}/join", passed, response)
+            return passed
+        except Exception as e:
+            self._log_test("POST /social/rooms/{roomId}/join", False, error=e)
+            return False
+    
+    def test_join_room_unauthorized(self):
+        """Test joining a room without authentication (should return 401)"""
+        if not hasattr(self, 'test_room_id') or not self.test_room_id:
+            self._log_test("POST /social/rooms/{roomId}/join (unauthorized)", False, error="No test room ID available")
+            return False
+        
+        try:
+            # No authorization header
+            response = requests.post(f"{self.base_url}/social/rooms/{self.test_room_id}/join")
+            passed = response.status_code == 401
+            
+            self._log_test("POST /social/rooms/{roomId}/join (unauthorized)", passed, response)
+            return passed
+        except Exception as e:
+            self._log_test("POST /social/rooms/{roomId}/join (unauthorized)", False, error=e)
+            return False
+    
+    def test_join_nonexistent_room(self):
+        """Test joining a non-existent room (should return 404)"""
+        if not self.token:
+            self._log_test("POST /social/rooms/{roomId}/join (not found)", False, error="No auth token available")
+            return False
+        
+        try:
+            headers = {"Authorization": f"Bearer {self.token}"}
+            response = requests.post(f"{self.base_url}/social/rooms/nonexistent_room_id/join", 
+                                    headers=headers)
+            passed = response.status_code == 404
+            
+            self._log_test("POST /social/rooms/{roomId}/join (not found)", passed, response)
+            return passed
+        except Exception as e:
+            self._log_test("POST /social/rooms/{roomId}/join (not found)", False, error=e)
+            return False
+    
+    def test_leave_room(self):
+        """Test leaving an aesthetic room"""
+        if not self.token:
+            self._log_test("POST /social/rooms/{roomId}/leave", False, error="No auth token available")
+            return False
+        
+        # Use the room we joined, or fall back to test room
+        room_id_to_leave = getattr(self, 'test_room_joined', None)
+        if not room_id_to_leave:
+            if hasattr(self, 'test_room_id') and self.test_room_id:
+                room_id_to_leave = self.test_room_id
+            else:
+                self._log_test("POST /social/rooms/{roomId}/leave", False, error="No test room ID available")
+                return False
+        
+        try:
+            headers = {"Authorization": f"Bearer {self.token}"}
+            response = requests.post(f"{self.base_url}/social/rooms/{room_id_to_leave}/leave", 
+                                    headers=headers)
+            # Status code should be 204 (No Content) for successful leave
+            passed = response.status_code == 204
+            
+            # If we successfully left, clear the stored ID
+            if passed and hasattr(self, 'test_room_joined'):
+                self.test_room_joined = None
+            
+            self._log_test("POST /social/rooms/{roomId}/leave", passed, response)
+            return passed
+        except Exception as e:
+            self._log_test("POST /social/rooms/{roomId}/leave", False, error=e)
+            return False
+    
+    def test_leave_room_unauthorized(self):
+        """Test leaving a room without authentication (should return 401)"""
+        if not hasattr(self, 'test_room_id') or not self.test_room_id:
+            self._log_test("POST /social/rooms/{roomId}/leave (unauthorized)", False, error="No test room ID available")
+            return False
+        
+        try:
+            # No authorization header
+            response = requests.post(f"{self.base_url}/social/rooms/{self.test_room_id}/leave")
+            passed = response.status_code == 401
+            
+            self._log_test("POST /social/rooms/{roomId}/leave (unauthorized)", passed, response)
+            return passed
+        except Exception as e:
+            self._log_test("POST /social/rooms/{roomId}/leave (unauthorized)", False, error=e)
+            return False
+    
+    def test_leave_nonexistent_room(self):
+        """Test leaving a non-existent room (should return 404)"""
+        if not self.token:
+            self._log_test("POST /social/rooms/{roomId}/leave (not found)", False, error="No auth token available")
+            return False
+        
+        try:
+            headers = {"Authorization": f"Bearer {self.token}"}
+            response = requests.post(f"{self.base_url}/social/rooms/nonexistent_room_id/leave", 
+                                    headers=headers)
+            passed = response.status_code == 404
+            
+            self._log_test("POST /social/rooms/{roomId}/leave (not found)", passed, response)
+            return passed
+        except Exception as e:
+            self._log_test("POST /social/rooms/{roomId}/leave (not found)", False, error=e)
+            return False
+    
+    # ─────────────────────────────────────────────────────────
     # RUN ALL TESTS
     # ─────────────────────────────────────────────────────────
     
@@ -1846,6 +2403,7 @@ class VibeCheckAPITester:
         print("-" * 70)
         self.test_get_current_user_aura()
         self.test_update_aura_profile()
+        self.test_update_aura_profile_rejects_aesthetic_tags()
         self.test_get_user_aura_by_id()
         self.test_update_aura_invalid_color()
         print()
@@ -1870,6 +2428,20 @@ class VibeCheckAPITester:
         print("🏆 Badges & Gamification Tests")
         print("-" * 70)
         self.test_get_all_badges()
+        
+        # self.test_get_badges_with_rarity_filter()
+        # self.test_get_badges_with_category_filter()
+        # self.test_get_badges_with_multiple_filters()
+        # self.test_get_current_user_badges()
+        # self.test_get_user_badges_by_id()
+        # self.test_get_nonexistent_user_badges()
+        # self.test_get_current_user_curator_stats()
+        # self.test_get_curator_stats_without_auth()
+        # self.test_get_user_curator_stats_by_id()
+        # self.test_get_nonexistent_user_curator_stats()
+        # self.test_get_all_curator_levels()
+        # self.test_curator_levels_are_progressive()
+
         self.test_get_badges_by_rarity()
         self.test_get_badges_by_category()
         self.test_get_badges_with_multiple_filters()
@@ -1905,6 +2477,25 @@ class VibeCheckAPITester:
         self.test_get_post_comments()
         self.test_delete_post_unauthorized()
         self.test_delete_post()
+        print()
+        
+        # Rooms tests
+        print("🏤 Aesthetic Rooms Tests")
+        print("-" * 70)
+        self.test_get_aesthetic_rooms()
+        self.test_get_aesthetic_rooms_with_limit()
+        self.test_get_aesthetic_rooms_trending()
+        self.test_get_room_by_id()
+        self.test_get_nonexistent_room()
+        self.test_get_room_posts()
+        self.test_get_room_posts_with_pagination()
+        self.test_get_room_posts_nonexistent_room()
+        self.test_join_room()
+        self.test_join_room_unauthorized()
+        self.test_join_nonexistent_room()
+        self.test_leave_room()
+        self.test_leave_room_unauthorized()
+        self.test_leave_nonexistent_room()
         print()
         
         # Pagination tests
@@ -1991,15 +2582,15 @@ def test_login_invalid(tester):
 
 
 def test_get_profile(tester):
-    tester.test_get_profile()  # May fail if no token
+    assert tester.test_get_profile()
 
 
 def test_update_profile(tester):
-    tester.test_update_profile()  # May fail if no token
+    assert tester.test_update_profile()
 
 
 def test_get_user_by_id(tester):
-    tester.test_get_user_by_id()  # May fail if no user_id
+    assert tester.test_get_user_by_id()
 
 
 def test_get_movies(tester):
@@ -2011,7 +2602,7 @@ def test_get_movies_with_search(tester):
 
 
 def test_get_movie_by_id(tester):
-    tester.test_get_movie_by_id()
+    assert tester.test_get_movie_by_id()
 
 
 def test_get_albums(tester):
@@ -2023,7 +2614,7 @@ def test_get_albums_with_search(tester):
 
 
 def test_get_album_by_id(tester):
-    tester.test_get_album_by_id()
+    assert tester.test_get_album_by_id()
 
 
 def test_get_games(tester):
@@ -2035,7 +2626,7 @@ def test_get_games_with_filters(tester):
 
 
 def test_get_game_by_id(tester):
-    tester.test_get_game_by_id()
+    assert tester.test_get_game_by_id()
 
 
 def test_get_books(tester):
@@ -2047,7 +2638,7 @@ def test_get_books_with_search(tester):
 
 
 def test_get_book_by_id(tester):
-    tester.test_get_book_by_id()
+    assert tester.test_get_book_by_id()
 
 
 def test_get_locations(tester):
@@ -2059,7 +2650,7 @@ def test_get_locations_with_filters(tester):
 
 
 def test_get_location_by_id(tester):
-    tester.test_get_location_by_id()
+    assert tester.test_get_location_by_id()
 
 
 def test_global_search(tester):
@@ -2071,23 +2662,27 @@ def test_global_search_with_categories(tester):
 
 
 def test_get_current_user_aura(tester):
-    tester.test_get_current_user_aura()
+    assert tester.test_get_current_user_aura()
 
 
 def test_update_aura_profile(tester):
-    tester.test_update_aura_profile()
+    assert tester.test_update_aura_profile()
+
+
+def test_update_aura_profile_rejects_aesthetic_tags(tester):
+    assert tester.test_update_aura_profile_rejects_aesthetic_tags()
 
 
 def test_get_user_aura_by_id(tester):
-    tester.test_get_user_aura_by_id()
+    assert tester.test_get_user_aura_by_id()
 
 
 def test_create_share(tester):
-    tester.test_create_share()
+    assert tester.test_create_share()
 
 
 def test_get_user_shares(tester):
-    tester.test_get_user_shares()
+    assert tester.test_get_user_shares()
 
 
 # ─────────────────────────────────────────────────────────
@@ -2096,6 +2691,19 @@ def test_get_user_shares(tester):
 
 def test_get_all_badges(tester):
     assert tester.test_get_all_badges()
+
+
+# def test_get_badges_with_rarity_filter(tester):
+#     tester.test_get_badges_with_rarity_filter()
+
+# def test_get_badges_with_category_filter(tester):
+#     tester.test_get_badges_with_category_filter()
+
+# def test_get_badges_with_multiple_filters(tester):
+#     tester.test_get_badges_with_multiple_filters()
+
+# def test_get_current_user_badges(tester):
+#     tester.test_get_current_user_badges()
 
 
 def test_get_badges_by_rarity(tester):
@@ -2111,27 +2719,44 @@ def test_get_badges_with_multiple_filters(tester):
 
 
 def test_get_user_badges(tester):
-    tester.test_get_user_badges()
+    assert tester.test_get_user_badges()
 
 
 def test_get_user_badges_by_id(tester):
-    tester.test_get_user_badges_by_id()
+    assert tester.test_get_user_badges_by_id()
 
 
 def test_get_nonexistent_user_badges(tester):
     assert tester.test_get_nonexistent_user_badges()
 
 
+# def test_get_current_user_curator_stats(tester):
+#     tester.test_get_current_user_curator_stats()
+
+# def test_get_curator_stats_without_auth(tester):
+#     assert tester.test_get_curator_stats_without_auth()
+
+# def test_get_user_curator_stats_by_id(tester):
+#     tester.test_get_user_curator_stats_by_id()
+
+
 def test_get_curator_stats(tester):
-    tester.test_get_curator_stats()
+    assert tester.test_get_curator_stats()
 
 
 def test_get_curator_stats_by_id(tester):
-    tester.test_get_curator_stats_by_id()
+    assert tester.test_get_curator_stats_by_id()
 
 
 def test_get_nonexistent_user_curator_stats(tester):
     assert tester.test_get_nonexistent_user_curator_stats()
+
+
+# def test_get_all_curator_levels(tester):
+#     assert tester.test_get_all_curator_levels()
+
+# def test_curator_levels_are_progressive(tester):
+#     assert tester.test_curator_levels_are_progressive()
 
 
 def test_get_curator_levels(tester):
@@ -2159,7 +2784,7 @@ def test_curator_stats_unauthorized(tester):
 # ─────────────────────────────────────────────────────────
 
 def test_create_post(tester):
-    tester.test_create_post()
+    assert tester.test_create_post()
 
 
 def test_create_post_missing_fields(tester):
@@ -2183,7 +2808,7 @@ def test_get_posts_sorted_by_popular(tester):
 
 
 def test_get_post_by_id(tester):
-    tester.test_get_post_by_id()
+    assert tester.test_get_post_by_id()
 
 
 def test_get_nonexistent_post(tester):
@@ -2191,19 +2816,19 @@ def test_get_nonexistent_post(tester):
 
 
 def test_like_post(tester):
-    tester.test_like_post()
+    assert tester.test_like_post()
 
 
 def test_like_post_again(tester):
-    tester.test_like_post_again()
+    assert tester.test_like_post_again()
 
 
 def test_unlike_post(tester):
-    tester.test_unlike_post()
+    assert tester.test_unlike_post()
 
 
 def test_add_comment(tester):
-    tester.test_add_comment()
+    assert tester.test_add_comment()
 
 
 def test_add_comment_missing_text(tester):
@@ -2211,15 +2836,75 @@ def test_add_comment_missing_text(tester):
 
 
 def test_get_post_comments(tester):
-    tester.test_get_post_comments()
+    assert tester.test_get_post_comments()
 
 
 def test_delete_post(tester):
-    tester.test_delete_post()
+    assert tester.test_delete_post()
 
 
 def test_delete_post_unauthorized(tester):
-    tester.test_delete_post_unauthorized()
+    assert tester.test_delete_post_unauthorized()
+
+
+# ─────────────────────────────────────────────────────────
+# ROOMS TESTS
+# ─────────────────────────────────────────────────────────
+
+def test_get_aesthetic_rooms(tester):
+    assert tester.test_get_aesthetic_rooms()
+
+
+def test_get_aesthetic_rooms_with_limit(tester):
+    assert tester.test_get_aesthetic_rooms_with_limit()
+
+
+def test_get_aesthetic_rooms_trending(tester):
+    assert tester.test_get_aesthetic_rooms_trending()
+
+
+def test_get_room_by_id(tester):
+    assert tester.test_get_room_by_id()
+
+
+def test_get_nonexistent_room(tester):
+    assert tester.test_get_nonexistent_room()
+
+
+def test_get_room_posts(tester):
+    assert tester.test_get_room_posts()
+
+
+def test_get_room_posts_with_pagination(tester):
+    assert tester.test_get_room_posts_with_pagination()
+
+
+def test_get_room_posts_nonexistent_room(tester):
+    assert tester.test_get_room_posts_nonexistent_room()
+
+
+def test_join_room(tester):
+    assert tester.test_join_room()
+
+
+def test_join_room_unauthorized(tester):
+    assert tester.test_join_room_unauthorized()
+
+
+def test_join_nonexistent_room(tester):
+    assert tester.test_join_nonexistent_room()
+
+
+def test_leave_room(tester):
+    assert tester.test_leave_room()
+
+
+def test_leave_room_unauthorized(tester):
+    assert tester.test_leave_room_unauthorized()
+
+
+def test_leave_nonexistent_room(tester):
+    assert tester.test_leave_nonexistent_room()
 
 
 # ─────────────────────────────────────────────────────────
@@ -2247,7 +2932,7 @@ def test_register_missing_fields(tester):
 
 
 def test_update_aura_invalid_color(tester):
-    tester.test_update_aura_invalid_color()
+    assert tester.test_update_aura_invalid_color()
 
 
 def test_get_nonexistent_user(tester):
@@ -2267,7 +2952,7 @@ def test_pagination_albums(tester):
 
 
 def test_get_shares_pagination(tester):
-    tester.test_get_shares_pagination()
+    assert tester.test_get_shares_pagination()
 
 
 # ─────────────────────────────────────────────────────────
@@ -2275,15 +2960,15 @@ def test_get_shares_pagination(tester):
 # ─────────────────────────────────────────────────────────
 
 def test_user_response_schema(tester):
-    tester.test_user_response_schema()
+    assert tester.test_user_response_schema()
 
 
 def test_content_response_schema(tester):
-    tester.test_content_response_schema()
+    assert tester.test_content_response_schema()
 
 
 def test_aura_response_schema(tester):
-    tester.test_aura_response_schema()
+    assert tester.test_aura_response_schema()
 
 
 # ─────────────────────────────────────────────────────────

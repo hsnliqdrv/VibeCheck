@@ -21,11 +21,15 @@ class Post(Base):
     # Engagement metrics
     likes = Column(Integer, default=0, nullable=False)
     comment_count = Column(Integer, default=0, nullable=False)
-    
+
+    # Optional room association (nullable = global / non-room post)
+    room_id = Column(String, ForeignKey('aesthetic_rooms.id'), nullable=True, index=True)
+
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
-    
+
     # Relationships
     user = relationship('User', backref='posts')
+    room = relationship('AestheticRoom', back_populates='posts')
     comments = relationship('Comment', back_populates='post', cascade='all, delete-orphan')
     post_likes = relationship('PostLike', back_populates='post', cascade='all, delete-orphan')
     
@@ -40,7 +44,8 @@ class Post(Base):
             'dominantColor': self.dominant_color,
             'timestamp': self.created_at.isoformat(),
             'likes': self.likes,
-            'comments': self.comment_count
+            'comments': self.comment_count,
+            'roomId': self.room_id,
         }
         
         if include_user and self.user:
