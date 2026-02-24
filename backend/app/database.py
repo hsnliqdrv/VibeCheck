@@ -24,6 +24,14 @@ def init_db(app):
     # Create all tables
     Base.metadata.create_all(engine)
 
+    # Seed default aesthetic rooms if missing
+    from app.seed_rooms import seed_rooms
+    db = session_factory()
+    try:
+        seed_rooms(db)
+    finally:
+        db.close()
+
 
 def get_db():
     """Get database session for current request context"""

@@ -2011,6 +2011,294 @@ class VibeCheckAPITester:
             return False
     
     # ─────────────────────────────────────────────────────────
+    # ROOMS TESTS
+    # ─────────────────────────────────────────────────────────
+    
+    def test_get_aesthetic_rooms(self):
+        """Test getting aesthetic rooms"""
+        try:
+            response = requests.get(f"{self.base_url}/social/rooms?limit=10")
+            passed = response.status_code == 200
+            
+            if passed and response.json():
+                data = response.json()
+                # API returns paginated rooms under the "data" key
+                if 'data' in data:
+                    rooms = data['data']
+                elif 'rooms' in data:
+                    rooms = data['rooms']
+                elif isinstance(data, list):
+                    rooms = data
+                else:
+                    rooms = []
+                
+                # Store a room ID for later tests if available
+                if len(rooms) > 0:
+                    self.test_room_id = rooms[0].get('id')
+            
+            self._log_test("GET /social/rooms", passed, response)
+            return passed
+        except Exception as e:
+            self._log_test("GET /social/rooms", False, error=e)
+            return False
+    
+    def test_get_aesthetic_rooms_with_limit(self):
+        """Test getting aesthetic rooms with limit parameter"""
+        try:
+            response = requests.get(f"{self.base_url}/social/rooms?limit=5&offset=0")
+            passed = response.status_code == 200
+            
+            self._log_test("GET /social/rooms (with limit)", passed, response)
+            return passed
+        except Exception as e:
+            self._log_test("GET /social/rooms (with limit)", False, error=e)
+            return False
+    
+    def test_get_aesthetic_rooms_trending(self):
+        """Test getting trending aesthetic rooms"""
+        try:
+            response = requests.get(f"{self.base_url}/social/rooms?trending=true&limit=10")
+            passed = response.status_code == 200
+            
+            if passed and response.json():
+                data = response.json()
+                # If API filters trending rooms, all should have trending=true
+                if 'rooms' in data:
+                    rooms = data['rooms']
+                elif isinstance(data, list):
+                    rooms = data
+                else:
+                    rooms = []
+                
+                # Optionally validate that trending filter was applied
+                # if len(rooms) > 0:
+                #     passed = all(room.get('trending') for room in rooms)
+            
+            self._log_test("GET /social/rooms (trending)", passed, response)
+            return passed
+        except Exception as e:
+            self._log_test("GET /social/rooms (trending)", False, error=e)
+            return False
+    
+    def test_get_room_by_id(self):
+        """Test getting a room by ID"""
+        if not hasattr(self, 'test_room_id') or not self.test_room_id:
+            self._log_test("GET /social/rooms/{roomId}", False, error="No test room ID available")
+            return False
+        
+        try:
+            response = requests.get(f"{self.base_url}/social/rooms/{self.test_room_id}")
+            passed = response.status_code == 200
+            
+            if passed and response.json():
+                data = response.json()
+                # Validate required fields from AestheticRoom schema
+                if isinstance(data, dict):
+                    required_fields = ['id', 'name', 'hashtag']
+                    passed = all(field in data for field in required_fields)
+            
+            self._log_test("GET /social/rooms/{roomId}", passed, response)
+            return passed
+        except Exception as e:
+            self._log_test("GET /social/rooms/{roomId}", False, error=e)
+            return False
+    
+    def test_get_nonexistent_room(self):
+        """Test getting a non-existent room (should return 404)"""
+        try:
+            response = requests.get(f"{self.base_url}/social/rooms/nonexistent_room_id_12345")
+            passed = response.status_code == 404
+            
+            self._log_test("GET /social/rooms/{roomId} (not found)", passed, response)
+            return passed
+        except Exception as e:
+            self._log_test("GET /social/rooms/{roomId} (not found)", False, error=e)
+            return False
+    
+    def test_get_room_posts(self):
+        """Test getting posts in a room"""
+        if not hasattr(self, 'test_room_id') or not self.test_room_id:
+            self._log_test("GET /social/rooms/{roomId}/posts", False, error="No test room ID available")
+            return False
+        
+        try:
+            response = requests.get(f"{self.base_url}/social/rooms/{self.test_room_id}/posts?limit=10")
+            passed = response.status_code == 200
+            
+            if passed and response.json():
+                data = response.json()
+                # API should return posts
+                if 'posts' in data:
+                    posts = data['posts']
+                elif isinstance(data, list):
+                    posts = data
+                else:
+                    posts = []
+            
+            self._log_test("GET /social/rooms/{roomId}/posts", passed, response)
+            return passed
+        except Exception as e:
+            self._log_test("GET /social/rooms/{roomId}/posts", False, error=e)
+            return False
+    
+    def test_get_room_posts_with_pagination(self):
+        """Test getting room posts with pagination"""
+        if not hasattr(self, 'test_room_id') or not self.test_room_id:
+            self._log_test("GET /social/rooms/{roomId}/posts (pagination)", False, error="No test room ID available")
+            return False
+        
+        try:
+            response = requests.get(f"{self.base_url}/social/rooms/{self.test_room_id}/posts?limit=5&offset=0")
+            passed = response.status_code == 200
+            
+            self._log_test("GET /social/rooms/{roomId}/posts (pagination)", passed, response)
+            return passed
+        except Exception as e:
+            self._log_test("GET /social/rooms/{roomId}/posts (pagination)", False, error=e)
+            return False
+    
+    def test_get_room_posts_nonexistent_room(self):
+        """Test getting posts from a non-existent room (should return 404)"""
+        try:
+            response = requests.get(f"{self.base_url}/social/rooms/nonexistent_room_id/posts")
+            passed = response.status_code == 404
+            
+            self._log_test("GET /social/rooms/{roomId}/posts (not found)", passed, response)
+            return passed
+        except Exception as e:
+            self._log_test("GET /social/rooms/{roomId}/posts (not found)", False, error=e)
+            return False
+    
+    def test_join_room(self):
+        """Test joining an aesthetic room"""
+        if not self.token:
+            self._log_test("POST /social/rooms/{roomId}/join", False, error="No auth token available")
+            return False
+        
+        if not hasattr(self, 'test_room_id') or not self.test_room_id:
+            self._log_test("POST /social/rooms/{roomId}/join", False, error="No test room ID available")
+            return False
+        
+        try:
+            headers = {"Authorization": f"Bearer {self.token}"}
+            response = requests.post(f"{self.base_url}/social/rooms/{self.test_room_id}/join", 
+                                    headers=headers)
+            # Status code can be 200 (success) or 400/409 (already joined)
+            passed = response.status_code in [200, 400, 409]
+            
+            # Store room ID if join was successful
+            if response.status_code == 200:
+                self.test_room_joined = self.test_room_id
+            
+            self._log_test("POST /social/rooms/{roomId}/join", passed, response)
+            return passed
+        except Exception as e:
+            self._log_test("POST /social/rooms/{roomId}/join", False, error=e)
+            return False
+    
+    def test_join_room_unauthorized(self):
+        """Test joining a room without authentication (should return 401)"""
+        if not hasattr(self, 'test_room_id') or not self.test_room_id:
+            self._log_test("POST /social/rooms/{roomId}/join (unauthorized)", False, error="No test room ID available")
+            return False
+        
+        try:
+            # No authorization header
+            response = requests.post(f"{self.base_url}/social/rooms/{self.test_room_id}/join")
+            passed = response.status_code == 401
+            
+            self._log_test("POST /social/rooms/{roomId}/join (unauthorized)", passed, response)
+            return passed
+        except Exception as e:
+            self._log_test("POST /social/rooms/{roomId}/join (unauthorized)", False, error=e)
+            return False
+    
+    def test_join_nonexistent_room(self):
+        """Test joining a non-existent room (should return 404)"""
+        if not self.token:
+            self._log_test("POST /social/rooms/{roomId}/join (not found)", False, error="No auth token available")
+            return False
+        
+        try:
+            headers = {"Authorization": f"Bearer {self.token}"}
+            response = requests.post(f"{self.base_url}/social/rooms/nonexistent_room_id/join", 
+                                    headers=headers)
+            passed = response.status_code == 404
+            
+            self._log_test("POST /social/rooms/{roomId}/join (not found)", passed, response)
+            return passed
+        except Exception as e:
+            self._log_test("POST /social/rooms/{roomId}/join (not found)", False, error=e)
+            return False
+    
+    def test_leave_room(self):
+        """Test leaving an aesthetic room"""
+        if not self.token:
+            self._log_test("POST /social/rooms/{roomId}/leave", False, error="No auth token available")
+            return False
+        
+        # Use the room we joined, or fall back to test room
+        room_id_to_leave = getattr(self, 'test_room_joined', None)
+        if not room_id_to_leave:
+            if hasattr(self, 'test_room_id') and self.test_room_id:
+                room_id_to_leave = self.test_room_id
+            else:
+                self._log_test("POST /social/rooms/{roomId}/leave", False, error="No test room ID available")
+                return False
+        
+        try:
+            headers = {"Authorization": f"Bearer {self.token}"}
+            response = requests.post(f"{self.base_url}/social/rooms/{room_id_to_leave}/leave", 
+                                    headers=headers)
+            # Status code should be 204 (No Content) for successful leave
+            passed = response.status_code == 204
+            
+            # If we successfully left, clear the stored ID
+            if passed and hasattr(self, 'test_room_joined'):
+                self.test_room_joined = None
+            
+            self._log_test("POST /social/rooms/{roomId}/leave", passed, response)
+            return passed
+        except Exception as e:
+            self._log_test("POST /social/rooms/{roomId}/leave", False, error=e)
+            return False
+    
+    def test_leave_room_unauthorized(self):
+        """Test leaving a room without authentication (should return 401)"""
+        if not hasattr(self, 'test_room_id') or not self.test_room_id:
+            self._log_test("POST /social/rooms/{roomId}/leave (unauthorized)", False, error="No test room ID available")
+            return False
+        
+        try:
+            # No authorization header
+            response = requests.post(f"{self.base_url}/social/rooms/{self.test_room_id}/leave")
+            passed = response.status_code == 401
+            
+            self._log_test("POST /social/rooms/{roomId}/leave (unauthorized)", passed, response)
+            return passed
+        except Exception as e:
+            self._log_test("POST /social/rooms/{roomId}/leave (unauthorized)", False, error=e)
+            return False
+    
+    def test_leave_nonexistent_room(self):
+        """Test leaving a non-existent room (should return 404)"""
+        if not self.token:
+            self._log_test("POST /social/rooms/{roomId}/leave (not found)", False, error="No auth token available")
+            return False
+        
+        try:
+            headers = {"Authorization": f"Bearer {self.token}"}
+            response = requests.post(f"{self.base_url}/social/rooms/nonexistent_room_id/leave", 
+                                    headers=headers)
+            passed = response.status_code == 404
+            
+            self._log_test("POST /social/rooms/{roomId}/leave (not found)", passed, response)
+            return passed
+        except Exception as e:
+            self._log_test("POST /social/rooms/{roomId}/leave (not found)", False, error=e)
+            return False
+    
+    # ─────────────────────────────────────────────────────────
     # RUN ALL TESTS
     # ─────────────────────────────────────────────────────────
     
@@ -2189,6 +2477,25 @@ class VibeCheckAPITester:
         self.test_get_post_comments()
         self.test_delete_post_unauthorized()
         self.test_delete_post()
+        print()
+        
+        # Rooms tests
+        print("🏤 Aesthetic Rooms Tests")
+        print("-" * 70)
+        self.test_get_aesthetic_rooms()
+        self.test_get_aesthetic_rooms_with_limit()
+        self.test_get_aesthetic_rooms_trending()
+        self.test_get_room_by_id()
+        self.test_get_nonexistent_room()
+        self.test_get_room_posts()
+        self.test_get_room_posts_with_pagination()
+        self.test_get_room_posts_nonexistent_room()
+        self.test_join_room()
+        self.test_join_room_unauthorized()
+        self.test_join_nonexistent_room()
+        self.test_leave_room()
+        self.test_leave_room_unauthorized()
+        self.test_leave_nonexistent_room()
         print()
         
         # Pagination tests
@@ -2538,6 +2845,66 @@ def test_delete_post(tester):
 
 def test_delete_post_unauthorized(tester):
     assert tester.test_delete_post_unauthorized()
+
+
+# ─────────────────────────────────────────────────────────
+# ROOMS TESTS
+# ─────────────────────────────────────────────────────────
+
+def test_get_aesthetic_rooms(tester):
+    assert tester.test_get_aesthetic_rooms()
+
+
+def test_get_aesthetic_rooms_with_limit(tester):
+    assert tester.test_get_aesthetic_rooms_with_limit()
+
+
+def test_get_aesthetic_rooms_trending(tester):
+    assert tester.test_get_aesthetic_rooms_trending()
+
+
+def test_get_room_by_id(tester):
+    assert tester.test_get_room_by_id()
+
+
+def test_get_nonexistent_room(tester):
+    assert tester.test_get_nonexistent_room()
+
+
+def test_get_room_posts(tester):
+    assert tester.test_get_room_posts()
+
+
+def test_get_room_posts_with_pagination(tester):
+    assert tester.test_get_room_posts_with_pagination()
+
+
+def test_get_room_posts_nonexistent_room(tester):
+    assert tester.test_get_room_posts_nonexistent_room()
+
+
+def test_join_room(tester):
+    assert tester.test_join_room()
+
+
+def test_join_room_unauthorized(tester):
+    assert tester.test_join_room_unauthorized()
+
+
+def test_join_nonexistent_room(tester):
+    assert tester.test_join_nonexistent_room()
+
+
+def test_leave_room(tester):
+    assert tester.test_leave_room()
+
+
+def test_leave_room_unauthorized(tester):
+    assert tester.test_leave_room_unauthorized()
+
+
+def test_leave_nonexistent_room(tester):
+    assert tester.test_leave_nonexistent_room()
 
 
 # ─────────────────────────────────────────────────────────
