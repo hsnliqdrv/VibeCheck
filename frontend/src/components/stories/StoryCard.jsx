@@ -47,6 +47,8 @@ const TEXTURE_OVERLAYS = {
   diagonal: "repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255,255,255,0.04) 10px, rgba(255,255,255,0.04) 20px)",
   grid: "linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px)",
   vignette: "radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.5) 100%)",
+  "frosted-glass": "__frosted__",
+  "liquid-glass": "__liquid__",
 };
 
 const TEXTURE_SIZES = {
@@ -143,15 +145,20 @@ export default function StoryCard({
 
   return (
     <div className={cardClasses} style={{ ...bgStyle, fontFamily: FONT_FAMILIES[font], color: textColor }}>
-      {/* Texture overlay */}
       {bgTexture !== "none" && TEXTURE_OVERLAYS[bgTexture] && (
-        <div
-          className="story-card__texture"
-          style={{
-            backgroundImage: TEXTURE_OVERLAYS[bgTexture],
-            backgroundSize: TEXTURE_SIZES[bgTexture] || "cover",
-          }}
-        />
+        TEXTURE_OVERLAYS[bgTexture] === "__frosted__" ? (
+          <div className="story-card__texture story-card__glass story-card__glass--frosted" />
+        ) : TEXTURE_OVERLAYS[bgTexture] === "__liquid__" ? (
+          <div className="story-card__texture story-card__glass story-card__glass--liquid" />
+        ) : (
+          <div
+            className="story-card__texture"
+            style={{
+              backgroundImage: TEXTURE_OVERLAYS[bgTexture],
+              backgroundSize: TEXTURE_SIZES[bgTexture] || "cover",
+            }}
+          />
+        )
       )}
 
       <div className="story-card__top">
@@ -199,6 +206,8 @@ export default function StoryCard({
         {subtitle && <p className="story-card__subtitle">{subtitle}</p>}
         {caption && <p className="story-card__caption">"{caption}"</p>}
       </div>
+
+      <div className="story-card__watermark">VibeCheck</div>
     </div>
   );
 }

@@ -1,9 +1,9 @@
-import { useState, useCallback } from "react";
-import { Clapperboard, Music, Gamepad2, BookOpen, Plane, Download, ExternalLink, Crosshair } from "lucide-react";
+import { useState, useCallback, useRef, useMemo } from "react";
+import { Clapperboard, Music, Gamepad2, BookOpen, Plane, Download, Share2, ExternalLink, Crosshair, Loader2 } from "lucide-react";
+import * as htmlToImage from "html-to-image";
 import StoryCard from "./StoryCard";
 import ContentSelector from "./ContentSelector";
 import StoryCustomizer from "./StoryCustomizer";
-import { createShare } from "../../services/api";
 import "./StoryGenerator.css";
 
 const CATEGORIES = [
@@ -43,9 +43,30 @@ export default function StoryGenerator() {
   const [category, setCategory] = useState("cinema");
   const [selectedContent, setSelectedContent] = useState(null);
   const [caption, setCaption] = useState("");
-  const [sharing, setSharing] = useState(false);
   const [shareResult, setShareResult] = useState(null);
   const [style, setStyle] = useState(DEFAULT_STYLE);
+  const [exporting, setExporting] = useState(false);
+  const exportRef = useRef(null);
+
+  const CATEGORY_GRADIENTS = {
+    cinema: "linear-gradient(145deg, #4a0e8f, #7b2ff7, #c471f5)",
+    music: "linear-gradient(145deg, #0f2027, #2c5364, #203a43)",
+    games: "linear-gradient(145deg, #1a1a2e, #16213e, #0f3460)",
+    books: "linear-gradient(145deg, #2d1b69, #6b3fa0, #8e44ad)",
+    travel: "linear-gradient(145deg, #134e5e, #71b280, #2ecc71)",
+  };
+
+  const exportBgStyle = useMemo(() => {
+    const bgColor = style.bgColor;
+    const dc = selectedContent?.dominantColor;
+    if (bgColor) {
+      return { background: `linear-gradient(145deg, ${bgColor}ff, ${bgColor}cc, ${bgColor}88)` };
+    }
+    if (dc) {
+      return { background: `linear-gradient(145deg, ${dc}dd, ${dc}88, ${dc}44)` };
+    }
+    return { background: CATEGORY_GRADIENTS[category] || CATEGORY_GRADIENTS.cinema };
+  }, [style.bgColor, selectedContent?.dominantColor, category]);
 
   const handleCategoryChange = (key) => {
     setCategory(key);
@@ -58,31 +79,70 @@ export default function StoryGenerator() {
     setStyle((prev) => ({ ...prev, [key]: value }));
   };
 
-  const handleShare = useCallback(async () => {
-    if (!selectedContent) return;
-    setSharing(true);
+
+  const exportStoryImage = useCallback(async (node) => {
+    const blob = await htmlToImage.toBlob(node, {
+      cacheBust: true,
+      pixelRatio: 2,
+      width: 1080,
+      height: 1920,
+      style: {
+        transform: 'scale(1)',
+        transformOrigin: 'top left',
+      },
+    });
+    return blob;
+  }, []);
+
+  const handleDownload = useCallback(async () => {
+    if (!exportRef.current) return;
+    setExporting(true);
     setShareResult(null);
     try {
-      const image = getImageFromContent(category, selectedContent);
-      const sharePayload = {
-        category,
-        contentId: selectedContent.id,
-        title: selectedContent.title || selectedContent.name,
-        image: image || undefined,
-        dominantColor: selectedContent.dominantColor || undefined,
-        caption: caption.trim() || undefined,
-      };
-      const share = await createShare(sharePayload);
-      setShareResult({ type: "success", data: share });
+      const blob = await exportStoryImage(exportRef.current);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "vibecheck-story.png";
+      link.click();
+      URL.revokeObjectURL(url);
+      setShareResult({ type: "success", message: "Story downloaded!" });
     } catch (err) {
-      setShareResult({
-        type: "error",
-        message: err.response?.data?.message || "Failed to share",
-      });
+      console.error("Download failed:", err);
+      setShareResult({ type: "error", message: "Failed to export image" });
     } finally {
-      setSharing(false);
+      setExporting(false);
     }
-  }, [category, selectedContent, caption]);
+  }, [exportStoryImage]);
+
+  const handleShareImage = useCallback(async () => {
+    if (!exportRef.current) return;
+    setExporting(true);
+    setShareResult(null);
+    try {
+      const blob = await exportStoryImage(exportRef.current);
+      const file = new File([blob], "vibecheck-story.png", { type: "image/png" });
+      if (navigator.share && navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ files: [file], title: "My VibeCheck Story" });
+        setShareResult({ type: "success", message: "Story shared!" });
+      } else {
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = "vibecheck-story.png";
+        link.click();
+        URL.revokeObjectURL(url);
+        setShareResult({ type: "success", message: "Story downloaded! Share it to Instagram manually." });
+      }
+    } catch (err) {
+      if (err.name !== "AbortError") {
+        console.error("Share failed:", err);
+        setShareResult({ type: "error", message: "Failed to share image" });
+      }
+    } finally {
+      setExporting(false);
+    }
+  }, [exportStoryImage]);
 
   return (
     <div className="story-generator">
@@ -94,9 +154,8 @@ export default function StoryGenerator() {
               <button
                 key={cat.key}
                 type="button"
-                className={`story-generator__cat-btn ${
-                  category === cat.key ? "story-generator__cat-btn--active" : ""
-                }`}
+                className={`story-generator__cat-btn ${category === cat.key ? "story-generator__cat-btn--active" : ""
+                  }`}
                 onClick={() => handleCategoryChange(cat.key)}
               >
                 <Icon size={16} />
@@ -132,7 +191,7 @@ export default function StoryGenerator() {
         )}
 
         {selectedContent && (
-          <StoryCustomizer style={style} onChange={updateStyle} />
+          <StoryCustomizer style={style} onChange={updateStyle} dominantColor={selectedContent?.dominantColor} />
         )}
       </div>
 
@@ -147,20 +206,46 @@ export default function StoryGenerator() {
               customStyle={style}
             />
 
+            {/* Export container */}
+            <div className="story-generator__export-wrap" aria-hidden="true">
+              <div className="story-generator__export" ref={exportRef} style={exportBgStyle}>
+                <StoryCard
+                  category={category}
+                  content={selectedContent}
+                  dominantColor={selectedContent.dominantColor}
+                  caption={caption || undefined}
+                  customStyle={style}
+                  className="story-card--export"
+                />
+              </div>
+            </div>
+
             <div className="story-generator__actions">
               <button
                 type="button"
-                className="story-generator__btn story-generator__btn--primary"
-                onClick={handleShare}
-                disabled={sharing}
+                className="story-generator__btn story-generator__btn--share"
+                onClick={handleShareImage}
+                disabled={exporting}
               >
-                {sharing ? "Sharing…" : "Share Story"}
+                {exporting ? (
+                  <><Loader2 size={18} className="story-generator__spinner" /> Exporting…</>
+                ) : (
+                  <><Share2 size={18} /> Share to Story</>
+                )}
+              </button>
+              <button
+                type="button"
+                className="story-generator__btn story-generator__btn--download"
+                onClick={handleDownload}
+                disabled={exporting}
+              >
+                <Download size={18} />
+                Download Story
               </button>
               <button
                 type="button"
                 className="story-generator__btn story-generator__btn--secondary"
                 onClick={() => {
-                  console.log(selectedContent["url"]);
                   window.location.href = selectedContent['url'] || "#";
                 }}
               >
@@ -169,12 +254,16 @@ export default function StoryGenerator() {
               </button>
             </div>
 
+            <p className="story-generator__share-hint">
+              On mobile, "Share to Story" opens your share sheet — pick Instagram!
+            </p>
+
             {shareResult && (
               <div
                 className={`story-generator__result story-generator__result--${shareResult.type}`}
               >
                 {shareResult.type === "success"
-                  ? "Story shared successfully!"
+                  ? (shareResult.message || "Story shared successfully!")
                   : shareResult.message}
               </div>
             )}
