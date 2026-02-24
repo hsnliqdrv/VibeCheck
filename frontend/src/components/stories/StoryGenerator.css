@@ -279,14 +279,30 @@
 
 /* Scale the card up */
 .story-generator__export .story-card {
+  width: 280px !important;
+  min-height: 460px !important;
   transform: scale(3.375);
   transform-origin: center center;
   box-shadow: none;
   animation: none;
 }
 
+.story-generator__export .story-card .story-card__title {
+  font-size: 1.15rem !important;
+}
+
 
 /* Share & Download */
+.story-generator__btn--vibecheck {
+  background: linear-gradient(135deg, #f43f5e, #e11d48);
+  color: #fff;
+  box-shadow: 0 8px 24px rgba(244, 63, 94, 0.35);
+}
+
+.story-generator__btn--vibecheck:not(:disabled):hover {
+  box-shadow: 0 12px 32px rgba(244, 63, 94, 0.45);
+}
+
 .story-generator__btn--share {
   background: linear-gradient(135deg, #6b6bf8, #b44aff);
   color: #fff;

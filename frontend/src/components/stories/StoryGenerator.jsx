@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef, useMemo } from "react";
-import { Clapperboard, Music, Gamepad2, BookOpen, Plane, Download, Share2, ExternalLink, Crosshair, Loader2 } from "lucide-react";
+import { Clapperboard, Music, Gamepad2, BookOpen, Plane, Download, Share2, ExternalLink, Crosshair, Loader2, Send } from "lucide-react";
 import * as htmlToImage from "html-to-image";
+import { createShare } from "../../services/api";
 import StoryCard from "./StoryCard";
 import ContentSelector from "./ContentSelector";
 import StoryCustomizer from "./StoryCustomizer";
@@ -46,6 +47,7 @@ export default function StoryGenerator() {
   const [shareResult, setShareResult] = useState(null);
   const [style, setStyle] = useState(DEFAULT_STYLE);
   const [exporting, setExporting] = useState(false);
+  const [sharingToProfile, setSharingToProfile] = useState(false);
   const exportRef = useRef(null);
 
   const CATEGORY_GRADIENTS = {
@@ -81,8 +83,13 @@ export default function StoryGenerator() {
 
 
   const exportStoryImage = useCallback(async (node) => {
+    // We add a tiny delay and force a clear layout to ensure 
+    // htmlToImage doesn't capture the previous cached image
+    await new Promise(res => setTimeout(res, 50));
+
     const blob = await htmlToImage.toBlob(node, {
       cacheBust: true,
+      skipFonts: false,
       pixelRatio: 2,
       width: 1080,
       height: 1920,
@@ -143,6 +150,32 @@ export default function StoryGenerator() {
       setExporting(false);
     }
   }, [exportStoryImage]);
+
+  const handleShare = useCallback(async () => {
+    if (!selectedContent) return;
+    setSharingToProfile(true);
+    setShareResult(null);
+    try {
+      const image = getImageFromContent(category, selectedContent);
+      const sharePayload = {
+        category,
+        contentId: selectedContent.id,
+        title: selectedContent.title || selectedContent.name,
+        image: image || undefined,
+        dominantColor: selectedContent.dominantColor || undefined,
+        caption: caption.trim() || undefined,
+      };
+      const share = await createShare(sharePayload);
+      setShareResult({ type: "success", data: share });
+    } catch (err) {
+      setShareResult({
+        type: "error",
+        message: err.response?.data?.message || "Failed to share",
+      });
+    } finally {
+      setSharingToProfile(false);
+    }
+  }, [category, selectedContent, caption]);
 
   return (
     <div className="story-generator">
@@ -223,9 +256,21 @@ export default function StoryGenerator() {
             <div className="story-generator__actions">
               <button
                 type="button"
+                className="story-generator__btn story-generator__btn--vibecheck"
+                onClick={handleShare}
+                disabled={exporting || sharingToProfile}
+              >
+                {sharingToProfile ? (
+                  <><Loader2 size={18} className="story-generator__spinner" /> Sharing…</>
+                ) : (
+                  <><Send size={18} /> Share to Profile</>
+                )}
+              </button>
+              <button
+                type="button"
                 className="story-generator__btn story-generator__btn--share"
                 onClick={handleShareImage}
-                disabled={exporting}
+                disabled={exporting || sharingToProfile}
               >
                 {exporting ? (
                   <><Loader2 size={18} className="story-generator__spinner" /> Exporting…</>

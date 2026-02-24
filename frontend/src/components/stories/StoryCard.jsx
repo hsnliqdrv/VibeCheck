@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { Clapperboard, Music, Gamepad2, BookOpen, Plane } from "lucide-react";
 import "./StoryCard.css";
 
@@ -104,6 +104,14 @@ export default function StoryCard({
   const title = content?.title || content?.name || "Untitled";
   const subtitle = getSubtitle(category, content);
   const image = getContentImage(category, content);
+  const [imgError, setImgError] = useState(false);
+  const [imageSrc, setImageSrc] = useState(image);
+
+  useEffect(() => {
+    setImgError(false);
+    // Append a unique parameter to bypass htmlToImage caching bugs across content switches
+    setImageSrc(image ? `${image}${image.includes('?') ? '&' : '?'}cb=${content?.id || Date.now()}` : null);
+  }, [image, content?.id]);
 
   const {
     font = "default",
@@ -189,8 +197,14 @@ export default function StoryCard({
       </div>
 
       <div className="story-card__image-wrap">
-        {image ? (
-          <img src={image} alt={title} className="story-card__image" />
+        {imageSrc && !imgError ? (
+          <img
+            src={imageSrc}
+            alt={title}
+            className="story-card__image"
+            onError={() => setImgError(true)}
+            crossOrigin="anonymous"
+          />
         ) : (
           <div className="story-card__image-placeholder">
             {(() => {
