@@ -97,24 +97,28 @@
   opacity: 0.8;
 }
 
-/* Font preview classes */
+/* Font previews */
 .story-customizer__chip--font-default .story-customizer__chip-preview {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
+
 .story-customizer__chip--font-serif .story-customizer__chip-preview {
   font-family: "Georgia", "Times New Roman", serif;
 }
+
 .story-customizer__chip--font-mono .story-customizer__chip-preview {
   font-family: "SF Mono", "Fira Code", monospace;
 }
+
 .story-customizer__chip--font-handwritten .story-customizer__chip-preview {
   font-family: "Segoe Script", "Comic Sans MS", cursive;
 }
+
 .story-customizer__chip--font-display .story-customizer__chip-preview {
   font-family: "Impact", "Arial Black", sans-serif;
 }
 
-/* Swatches */
+/* Color swatches */
 .story-customizer__swatches {
   display: flex;
   gap: 8px;
@@ -144,11 +148,37 @@
   transform: scale(1.1);
 }
 
+/* Match swatch */
+.story-customizer__swatch--match {
+  position: relative;
+}
+
+.story-customizer__swatch--match::after {
+  content: "🎯";
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  font-size: 0.55rem;
+  line-height: 1;
+}
+
+.story-customizer__swatch--match:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* Glass chip */
+.story-customizer__chip--glass {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.85), rgba(240, 240, 255, 0.7));
+  border-color: rgba(108, 99, 255, 0.15);
+}
+
 @keyframes fadeSlideUp {
   from {
     opacity: 0;
     transform: translateY(10px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);

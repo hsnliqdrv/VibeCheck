@@ -42,6 +42,45 @@ function getSecondary(category, item) {
   }
 }
 
+function ContentSelectorItem({ item, isActive, category, index, onSelect }) {
+  const [imgError, setImgError] = useState(false);
+  const thumb = getThumbnail(category, item);
+  const secondary = getSecondary(category, item);
+
+  return (
+    <button
+      type="button"
+      className={`content-selector__item ${isActive ? "content-selector__item--active" : ""
+        }`}
+      style={{ animationDelay: `${index * 50}ms` }}
+      onClick={() => onSelect(item)}
+    >
+      <div className="content-selector__thumb">
+        {thumb && !imgError ? (
+          <img
+            src={thumb}
+            alt={item.title || item.name}
+            onError={() => setImgError(true)}
+            crossOrigin="anonymous"
+          />
+        ) : (
+          <div className="content-selector__thumb-placeholder" />
+        )}
+      </div>
+      <div className="content-selector__meta">
+        <span className="content-selector__title">
+          {item.title || item.name}
+        </span>
+        {secondary && (
+          <span className="content-selector__secondary">
+            {secondary}
+          </span>
+        )}
+      </div>
+    </button>
+  );
+}
+
 export default function ContentSelector({ category, selected, onSelect }) {
   const [items, setItems] = useState([]);
   const [search, setSearch] = useState("");
@@ -123,41 +162,16 @@ export default function ContentSelector({ category, selected, onSelect }) {
         {!loading && !error && items.length === 0 && (
           <div className="content-selector__status">No results found</div>
         )}
-        {items.map((item, index) => {
-          const isActive = selected?.id === item.id;
-          const thumb = getThumbnail(category, item);
-          const secondary = getSecondary(category, item);
-
-          return (
-            <button
-              key={item.id}
-              type="button"
-              className={`content-selector__item ${
-                isActive ? "content-selector__item--active" : ""
-              }`}
-              style={{ animationDelay: `${index * 50}ms` }}
-              onClick={() => onSelect(item)}
-            >
-              <div className="content-selector__thumb">
-                {thumb ? (
-                  <img src={thumb} alt={item.title || item.name} />
-                ) : (
-                  <div className="content-selector__thumb-placeholder" />
-                )}
-              </div>
-              <div className="content-selector__meta">
-                <span className="content-selector__title">
-                  {item.title || item.name}
-                </span>
-                {secondary && (
-                  <span className="content-selector__secondary">
-                    {secondary}
-                  </span>
-                )}
-              </div>
-            </button>
-          );
-        })}
+        {items.map((item, index) => (
+          <ContentSelectorItem
+            key={item.id}
+            item={item}
+            isActive={selected?.id === item.id}
+            category={category}
+            index={index}
+            onSelect={onSelect}
+          />
+        ))}
       </div>
     </div>
   );

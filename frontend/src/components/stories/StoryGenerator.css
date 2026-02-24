@@ -219,6 +219,7 @@
     opacity: 0;
     transform: translateY(10px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -230,6 +231,7 @@
     opacity: 0;
     transform: translateY(18px) scale(0.98);
   }
+
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
@@ -253,4 +255,93 @@
     width: 100%;
     max-width: 320px;
   }
+}
+
+
+/* Export container */
+.story-generator__export-wrap {
+  position: absolute;
+  left: -9999px;
+  top: -9999px;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: -1;
+}
+
+.story-generator__export {
+  position: relative;
+  width: 1080px;
+  height: 1920px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Scale the card up */
+.story-generator__export .story-card {
+  width: 280px !important;
+  min-height: 460px !important;
+  transform: scale(3.375);
+  transform-origin: center center;
+  box-shadow: none;
+  animation: none;
+}
+
+.story-generator__export .story-card .story-card__title {
+  font-size: 1.15rem !important;
+}
+
+
+/* Share & Download */
+.story-generator__btn--vibecheck {
+  background: linear-gradient(135deg, #f43f5e, #e11d48);
+  color: #fff;
+  box-shadow: 0 8px 24px rgba(244, 63, 94, 0.35);
+}
+
+.story-generator__btn--vibecheck:not(:disabled):hover {
+  box-shadow: 0 12px 32px rgba(244, 63, 94, 0.45);
+}
+
+.story-generator__btn--share {
+  background: linear-gradient(135deg, #6b6bf8, #b44aff);
+  color: #fff;
+  box-shadow: 0 8px 24px rgba(107, 107, 248, 0.35);
+}
+
+.story-generator__btn--share:not(:disabled):hover {
+  box-shadow: 0 12px 32px rgba(107, 107, 248, 0.5);
+}
+
+.story-generator__btn--download {
+  background: linear-gradient(135deg, #22c55e, #059669);
+  color: #fff;
+  box-shadow: 0 8px 24px rgba(34, 197, 94, 0.35);
+}
+
+.story-generator__btn--download:not(:disabled):hover {
+  box-shadow: 0 12px 32px rgba(34, 197, 94, 0.45);
+}
+
+
+/* Spinner */
+.story-generator__spinner {
+  animation: sg-spin 0.8s linear infinite;
+}
+
+@keyframes sg-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+
+/* Share hint */
+.story-generator__share-hint {
+  font-size: 0.78rem;
+  color: rgba(29, 27, 34, 0.4);
+  text-align: center;
+  max-width: 280px;
+  line-height: 1.4;
+  margin: 0;
 }
