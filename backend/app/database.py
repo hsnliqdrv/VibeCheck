@@ -21,6 +21,11 @@ def init_db(app):
     # NOTE: badge.py is legacy – gamification.py already defines the Badge table
     from app.models import user, content, share, post, gamification, room
     
+    # In development mode, drop all tables and recreate them
+    if app.config.get('FLASK_ENV', 'development') == 'development':
+        Base.metadata.drop_all(engine)
+        print("Development mode: Dropped all tables")
+    
     # Create all tables
     Base.metadata.create_all(engine)
 
