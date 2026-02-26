@@ -1,113 +1,185 @@
+/* frontend/src/components/community/Community.css */
+
+/* --- Переменные --- */
+:root {
+  --accent-default: #7b2ff7;
+  --bg-card: rgba(255,255,255,0.05);
+  --text-muted: rgba(255,255,255,0.7);
+}
+
+/* ===================== PAGE ===================== */
 .community-page {
-  padding: 2rem;
+  padding: 2rem;                  /* из новой версии */
   max-width: 1200px;
   margin: 0 auto;
-  color: #fff;
+  color: #fff;                    /* глобальный цвет (тёмная тема) */
 }
 
+/* ===================== HEADER ===================== */
 .community-header h1 {
-  font-size: 2.5rem;
-  margin-bottom: 0.5rem;
+  font-family: "DM Serif Display", serif; /* сохранил фирменный шрифт */
+  font-size: 2.5rem;                       /* из новой версии (слегка уменьшен) */
   font-weight: 800;
+  margin-bottom: 0.5rem;
+  color: inherit;                          /* наследует цвет страницы */
 }
 
+.community-header p {
+  color: var(--text-muted);                /* новый muted цвет */
+  font-size: 1.1rem;
+}
+
+/* ===================== SECTION TITLE ===================== */
 .section-title {
-  margin: 2rem 0 1.5rem;
-  font-size: 1.5rem;
+  font-family: "DM Serif Display", serif;
+  font-size: 1.8rem;           /* из старой версии, оставил более выразительный размер */
+  margin: 2rem 0 1.5rem;       /* сочетание значений */
   display: flex;
   align-items: center;
   gap: 10px;
+  color: inherit;
 }
 
 .section-title::before {
-  content: '📈'; /* Иконка тренда */
+  content: '📈'; /* Иконка тренда (из новой версии) */
 }
 
-/* Trending Grid */
+/* ===================== TRENDING GRID (верх) ===================== */
+/* адаптивная сетка: два столбца на больших экранах, авто-fit на малых */
 .trending-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
   gap: 1.5rem;
 }
 
+/* Карточка */
 .trending-card {
   position: relative;
-  height: 240px;
+  height: 240px;                         /* среднее значение */
   border-radius: 20px;
   overflow: hidden;
   text-decoration: none;
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  transition: transform 0.3s cubic-bezier(.17,.89,.32,1.28), box-shadow 0.3s ease;
   box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+  background: #111;                       /* запасной фон, если нет картинки */
 }
 
+/* ховер использует переменную accent, если задана на элементе */
 .trending-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 15px 40px var(--accent);
+  transform: translateY(-6px);
+  box-shadow: 0 15px 40px var(--accent, rgba(123,47,247,0.35));
 }
 
+/* картинка — абсолютная, чтобы работать с градиентом */
 .trending-card img {
-  width: 100%;
-  height: 100%;
+  position: absolute;
+  top: 0; left: 0; width: 100%; height: 100%;
   object-fit: cover;
+  z-index: 1;
   filter: brightness(0.7);
 }
 
+/* контент поверх картинки */
 .card-content {
-  position: absolute;
-  bottom: 0;
-  left: 0;
+  position: relative;
+  z-index: 2;
   padding: 1.5rem;
-  background: linear-gradient(transparent, rgba(0,0,0,0.8));
+  background: linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 100%);
+  color: white;
   width: 100%;
 }
 
 .card-content h3 {
+  font-family: "DM Serif Display", serif;
   font-size: 1.8rem;
-  margin: 0;
+  margin: 0 0 6px 0;
 }
 
-/* All Rooms List */
+.card-content span {
+  font-size: 0.95rem;
+  opacity: 0.9;
+}
+
+/* ===================== ALL ROOMS (нижняя сетка) ===================== */
 .rooms-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
   gap: 1rem;
+  margin-top: 0.75rem;
 }
 
 .room-item {
   display: flex;
   align-items: center;
-  background: rgba(255,255,255,0.05);
+  background: var(--bg-card);
   padding: 1rem;
   border-radius: 15px;
   text-decoration: none;
   color: inherit;
-  transition: background 0.2s;
+  gap: 1rem;
+  transition: background 0.2s, transform 0.12s;
+  border: 1px solid rgba(255,255,255,0.03);
 }
 
 .room-item:hover {
-  background: rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.08);
+  transform: translateY(-3px);
 }
 
 .room-icon {
-  width: 50px;
-  height: 50px;
+  width: 56px;
+  height: 56px;
   border-radius: 12px;
-  margin-right: 1rem;
+  flex-shrink: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.05), rgba(0,0,0,0.1));
 }
 
 .room-info {
   flex-grow: 1;
+  min-width: 0;
 }
 
-.room-info h4 { margin: 0; font-size: 1.1rem; }
-.room-info p { margin: 0; font-size: 0.85rem; opacity: 0.6; }
+.room-info h4 {
+  margin: 0;
+  font-size: 1.05rem;
+  color: inherit;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 
+.room-info p {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+/* кнопка присоединения */
 .join-btn-small {
-  background: #7b2ff7;
+  background: var(--accent-default);
   border: none;
   color: white;
   padding: 0.5rem 1rem;
   border-radius: 8px;
   cursor: pointer;
   font-weight: 600;
+  white-space: nowrap;
+}
+
+/* ===================== МЕЛКИЕ ПРАВКИ / ФОЛБЭКИ ===================== */
+/* Loading / error placeholders */
+.trending-grid > div,
+.rooms-grid > div {
+  color: var(--text-muted);
+  padding: 1rem;
+}
+
+/* если нужно уменьшить высоту карточки на самых маленьких экранах */
+@media (max-width: 480px) {
+  .trending-card { height: 200px; border-radius: 16px; }
+  .community-header h1 { font-size: 1.9rem; }
+  .card-content h3 { font-size: 1.3rem; }
 }

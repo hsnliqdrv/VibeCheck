@@ -1,3 +1,4 @@
+// frontend/src/components/community/CommunityRoom.jsx
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { getRoomShares } from '../../services/api';
@@ -8,10 +9,44 @@ export default function CommunityRoom() {
   const { roomId } = useParams();
   const [posts, setPosts] = useState([]);
   const [filter, setFilter] = useState('recent');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    // В реальности здесь будет вызов API с фильтром roomId
-    getRoomShares(roomId).then(res => setPosts(res.data || []));
+    if (!roomId) {
+      setPosts([]);
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    // Передаём фильтр как параметр (если API поддерживает)
+    getRoomShares(roomId, { filter })
+      .then((res) => {
+        console.log('getRoomShares response for', roomId, res);
+
+        // Нормализуем разный формат ответа
+        let arr = [];
+        if (Array.isArray(res)) {
+          arr = res;
+        } else if (res && Array.isArray(res.data)) {
+          arr = res.data;
+        } else if (res && Array.isArray(res.shares)) {
+          arr = res.shares;
+        } else {
+          const maybeArray = Object.values(res || {}).find((v) => Array.isArray(v));
+          if (maybeArray) arr = maybeArray;
+        }
+
+        setPosts(arr);
+      })
+      .catch((err) => {
+        console.error('Error loading room shares:', err);
+        setError(err);
+        setPosts([]);
+      })
+      .finally(() => setLoading(false));
   }, [roomId, filter]);
 
   return (
@@ -20,7 +55,7 @@ export default function CommunityRoom() {
         <div className="room-hero-content">
           <div className="room-meta">
             <span className="room-tag">Public Space</span>
-            <h1>{roomId.replace('-', ' ').toUpperCase()}</h1>
+            <h1>{(roomId || '').replace(/-/g, ' ').toUpperCase()}</h1>
             <div className="room-stats">
               <span><b>12.4k</b> members</span>
               <span><b>450</b> online</span>
@@ -43,8 +78,12 @@ export default function CommunityRoom() {
         </div>
 
         <div className="masonry-grid">
-          {posts.map(post => (
-            <StoryCard 
+          {loading && <div>Loading posts...</div>}
+          {error && <div style={{ color: 'salmon' }}>Failed to load posts</div>}
+
+          {!loading && !error && posts.length === 0 && <div>No posts yet</div>}
+          {!loading && Array.isArray(posts) && posts.map((post) => (
+            <StoryCard
               key={post.id}
               category={post.category}
               content={{ title: post.title, image: post.image }}

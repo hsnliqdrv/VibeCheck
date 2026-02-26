@@ -12,6 +12,8 @@ api.interceptors.request.use((config) => {
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
+
+/* ===================== CONTENT ===================== */
 export const getMovies = (params = {}) =>
   api.get("/content/movies", { params }).then((r) => r.data);
 export const getMovieDetails = (id) =>
@@ -34,12 +36,16 @@ export const getLocationDetails = (id) =>
   api.get(`/content/locations/${id}`).then((r) => r.data);
 export const globalSearch = (params) =>
   api.get("/search", { params }).then((r) => r.data);
+
+/* ===================== USER ===================== */
 export const getUserProfile = () =>
   api.get("/users/profile").then((r) => r.data);
 export const updateUserProfile = (body) =>
   api.put("/users/profile", body).then((r) => r.data);
 export const getUserById = (userId) =>
   api.get(`/users/${userId}`).then((r) => r.data);
+
+/* ===================== AURA ===================== */
 export const getAuraProfile = () =>
   api.get("/aura/profile").then((r) => r.data);
 export const updateAuraProfile = (body) =>
@@ -51,6 +57,53 @@ export const getMyShares = (params = {}) =>
 export const createShare = (body) =>
   api.post("/aura/shares", body).then((r) => r.data);
 
+/* ===================== COMMUNITY ===================== */
+export const getCommunityRooms = (params = {}) =>
+  api.get("/community/rooms", { params }).then((r) => r.data);
+
+export const getCommunityRoomDetails = (roomId) =>
+  api.get(`/community/rooms/${roomId}`).then((r) => r.data);
+
+export const createCommunityRoom = (body) =>
+  api.post("/community/rooms", body).then((r) => r.data);
+
+/* ===================== ROOM SHARES ===================== */
+/**
+ * Попытка получить shares для комнаты.
+ * Сначала пробуем /community/rooms/:roomId/shares,
+ * если backend не поддерживает — используем fallback на /aura/shares?room_id=...
+ */
+export const getRoomShares = async (roomId, params = {}) => {
+  if (!roomId) return []; // безопасность
+  try {
+    const res = await api.get(`/community/rooms/${roomId}/shares`, { params });
+    return res.data;
+  } catch (err) {
+    // если 404 — пробуем fallback (часто у вас shares лежат в /aura/shares)
+    if (err.response && err.response.status === 404) {
+      const res2 = await api.get("/aura/shares", {
+        params: { room_id: roomId, ...params },
+      });
+      return res2.data;
+    }
+    // остальные ошибки пробрасываем дальше
+    throw err;
+  }
+};
+
+/* ===================== AUTH ===================== */
+export const loginUser = (credentials) =>
+  api.post("/auth/login", credentials).then((r) => r.data);
+export const registerUser = (userData) =>
+  api.post("/auth/register", userData).then((r) => r.data);
+
+/* ===================== MISC ===================== */
+export const getCuratorProgress = () =>
+  axios
+    .get("https://mock.apidog.com/m1/1194510-1189388-default/users/curator-progress")
+    .then((r) => r.data);
+
+/* ===================== CATEGORY FETCHERS ===================== */
 const CATEGORY_FETCHERS = {
   cinema: getMovies,
   music: getAlbums,
@@ -64,14 +117,5 @@ export const getContentByCategory = (category, params = {}) => {
   if (!fetcher) throw new Error(`Unknown category: ${category}`);
   return fetcher(params);
 };
-
-export const loginUser = (credentials) =>
-  api.post("/auth/login", credentials).then((r) => r.data);
-export const registerUser = (userData) =>
-  api.post("/auth/register", userData).then((r) => r.data);
-export const getCuratorProgress = () =>
-  axios
-    .get("https://mock.apidog.com/m1/1194510-1189388-default/users/curator-progress")
-    .then((r) => r.data);
 
 export default api;
