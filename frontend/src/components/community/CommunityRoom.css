@@ -1,0 +1,92 @@
+.room-page {
+  min-height: 100vh;
+  background: #121212;
+}
+
+.room-hero {
+  height: 350px;
+  display: flex;
+  align-items: flex-end;
+  padding: 3rem;
+  position: relative;
+}
+
+.room-hero-content {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+}
+
+.room-tag {
+  background: rgba(255,255,255,0.2);
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.room-meta h1 {
+  font-size: 4rem;
+  margin: 0.5rem 0;
+  font-weight: 900;
+  color: #fff;
+}
+
+.room-stats {
+  display: flex;
+  gap: 20px;
+  opacity: 0.8;
+}
+
+.btn-join-large {
+  background: #fff;
+  color: #000;
+  border: none;
+  padding: 1rem 2rem;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.btn-join-large:hover {
+  transform: scale(1.05);
+}
+
+/* Filters */
+.content-filters {
+  display: flex;
+  gap: 1rem;
+  padding: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.content-filters button {
+  background: transparent;
+  border: none;
+  color: rgba(255,255,255,0.5);
+  font-size: 1.1rem;
+  cursor: pointer;
+  padding-bottom: 5px;
+}
+
+.content-filters button.active {
+  color: #fff;
+  border-bottom: 2px solid #7b2ff7;
+}
+
+/* Masonry Grid */
+.masonry-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1.5rem;
+  padding: 0 2rem 4rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}

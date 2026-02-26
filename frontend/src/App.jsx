@@ -4,6 +4,8 @@ import Login from "./Login";
 import Register from "./Register";
 import Profile from "./Profile";
 import { StoryGenerator } from "./components/stories";
+import Community from "./components/community/Community";
+import CommunityRoom from "./components/community/CommunityRoom";
 import "./App.css";
 
 function AppShell() {
@@ -51,6 +53,7 @@ function AppShell() {
           {!isAuthed && <Link to="/register">Register</Link>}
           {isAuthed && <Link to="/stories">Stories</Link>}
           {isAuthed && <Link to="/profile">Profile</Link>}
+          {isAuthed && <Link to="/community">Community</Link>}
           {isAuthed && (
             <button type="button" className="nav-link-button" onClick={handleLogout}>
               Logout
@@ -64,6 +67,8 @@ function AppShell() {
         <Route path="/register" element={<Register />} />
         <Route path="/stories" element={<StoryGenerator />} />
         <Route path="/profile" element={<Profile />} />
+        <Route path="/community" element={<Community />} />
+        <Route path="/community/:roomId" element={<CommunityRoom />} />
       </Routes>
     </div>
   );
