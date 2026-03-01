@@ -1,3 +1,255 @@
+/* добавим пару классов, которые использует новый компонент */
+.btn-create {
+  background: linear-gradient(90deg, #7b2ff7, #ff4dbb);
+  color: #fff;
+  border: none;
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-weight: 700;
+  box-shadow: 0 8px 24px rgba(123,47,247,0.18);
+  cursor: pointer;
+}
+
+/* trending badge */
+.badge-trending {
+  display:inline-block;
+  background: rgba(255,255,255,0.95);
+  color:#333;
+  padding:6px 10px;
+  border-radius:16px;
+  font-size:0.75rem;
+  font-weight:700;
+  margin-bottom:8px;
+}
+
+/* tags row */
+.tags-row { margin-top:8px; display:flex; gap:8px; flex-wrap:wrap; }
+.tag { background: rgba(255,255,255,0.06); padding:6px 10px; border-radius:12px; font-size:0.8rem; }
+
+/* fallback placeholders */
+.placeholder { color: var(--text-muted); padding: 1rem; }
+
+/* немного подправим trending-card чтобы соответствовало макету */
+.trending-card { min-height: 220px; border-radius: 18px; display:block; position:relative; overflow:hidden; }
+.trending-card .no-image { width:100%; height:100%; background: linear-gradient(90deg,#7b2ff7,#ff7ab6); }
+.trending-card img { transition: transform .45s ease; }
+.trending-card:hover img { transform: scale(1.06); }
+
+/* компактные мета внутри карточки */
+.card-meta { display:flex; justify-content:flex-end; gap:8px; }
+
+/* ensure room-icon has image if provided */
+.room-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 14px;
+  background-size:cover;
+  background-position:center;
+  flex-shrink:0;
+}
+
+/* --- Переменные --- */
+:root {
+  --accent-default: #7b2ff7;
+  --bg-card: rgba(255,255,255,0.05);
+  --text-muted: rgba(255,255,255,0.7);
+}
+
+/* ===================== PAGE ===================== */
+.community-page {
+  padding: 2rem;                  /* из новой версии */
+  max-width: 1200px;
+  margin: 0 auto;
+  color: #fff;                    /* глобальный цвет (тёмная тема) */
+}
+
+/* ===================== HEADER ===================== */
+.community-header h1 {
+  font-family: "DM Serif Display", serif; /* сохранил фирменный шрифт */
+  font-size: 2.5rem;                       /* из новой версии (слегка уменьшен) */
+  font-weight: 800;
+  margin-bottom: 0.5rem;
+  color: inherit;                          /* наследует цвет страницы */
+}
+
+.community-header p {
+  color: var(--text-muted);                /* новый muted цвет */
+  font-size: 1.1rem;
+}
+
+/* ===================== SECTION TITLE ===================== */
+.section-title {
+  font-family: "DM Serif Display", serif;
+  font-size: 1.8rem;           /* из старой версии, оставил более выразительный размер */
+  margin: 2rem 0 1.5rem;       /* сочетание значений */
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: inherit;
+}
+
+.section-title::before {
+  content: '📈'; /* Иконка тренда (из новой версии) */
+}
+
+/* ===================== TRENDING GRID (верх) ===================== */
+/* адаптивная сетка: два столбца на больших экранах, авто-fit на малых */
+.trending-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 1.5rem;
+}
+
+/* Карточка */
+.trending-card {
+  position: relative;
+  height: 240px;                         /* среднее значение */
+  border-radius: 20px;
+  overflow: hidden;
+  text-decoration: none;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  transition: transform 0.3s cubic-bezier(.17,.89,.32,1.28), box-shadow 0.3s ease;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+  background: #111;                       /* запасной фон, если нет картинки */
+}
+
+/* ховер использует переменную accent, если задана на элементе */
+.trending-card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 15px 40px var(--accent, rgba(123,47,247,0.35));
+}
+
+/* картинка — абсолютная, чтобы работать с градиентом */
+.trending-card img {
+  position: absolute;
+  top: 0; left: 0; width: 100%; height: 100%;
+  object-fit: cover;
+  z-index: 1;
+  filter: brightness(0.7);
+}
+
+/* контент поверх картинки */
+.card-content {
+  position: relative;
+  z-index: 2;
+  padding: 1.5rem;
+  background: linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 100%);
+  color: white;
+  width: 100%;
+}
+
+.card-content h3 {
+  font-family: "DM Serif Display", serif;
+  font-size: 1.8rem;
+  margin: 0 0 6px 0;
+}
+
+.card-content span {
+  font-size: 0.95rem;
+  opacity: 0.9;
+}
+
+/* ===================== ALL ROOMS (нижняя сетка) ===================== */
+.rooms-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 1rem;
+  margin-top: 0.75rem;
+}
+
+.room-item {
+  display: flex;
+  align-items: center;
+  background: var(--bg-card);
+  padding: 1rem;
+  border-radius: 15px;
+  text-decoration: none;
+  color: inherit;
+  gap: 1rem;
+  transition: background 0.2s, transform 0.12s;
+  border: 1px solid rgba(255,255,255,0.03);
+}
+
+.room-item:hover {
+  background: rgba(255,255,255,0.08);
+  transform: translateY(-3px);
+}
+
+.room-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+  flex-shrink: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.05), rgba(0,0,0,0.1));
+}
+
+.room-info {
+  flex-grow: 1;
+  min-width: 0;
+}
+
+.room-info h4 {
+  margin: 0;
+  font-size: 1.05rem;
+  color: inherit;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.room-info p {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+/* кнопка присоединения */
+.join-btn-small {
+  background: var(--accent-default);
+  border: none;
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* ===================== МЕЛКИЕ ПРАВКИ / ФОЛБЭКИ ===================== */
+/* Loading / error placeholders */
+.trending-grid > div,
+.rooms-grid > div {
+  color: var(--text-muted);
+  padding: 1rem;
+}
+
+/* если нужно уменьшить высоту карточки на самых маленьких экранах */
+@media (max-width: 480px) {
+  .trending-card { height: 200px; border-radius: 16px; }
+  .community-header h1 { font-size: 1.9rem; }
+  .card-content h3 { font-size: 1.3rem; }
+}
+
+/* ===================== ROOM PAGE ADDITIONS ===================== */
+
+/* search input */
+.search-input { background: rgba(255,255,255,0.02); color: #fff; }
+
+/* masonry adjustments */
+.masonry-grid { grid-auto-rows: 10px; }
+
+/* small responsive tweaks */
+@media (max-width: 900px) {
+  .room-hero { padding: 2rem; height: 260px; }
+  .room-hero .room-meta h1 { font-size: 2rem; }
+}
+
+/* moderator avatars in hero */
+.room-actions img { box-shadow: 0 6px 18px rgba(0,0,0,0.4); }
+
+/* ===================== ROOM PAGE BASE ===================== */
 .room-page {
   min-height: 100vh;
   background: #121212;

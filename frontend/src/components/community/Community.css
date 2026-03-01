@@ -1,4 +1,52 @@
-/* frontend/src/components/community/Community.css */
+/* добавим пару классов, которые использует новый компонент */
+.btn-create {
+  background: linear-gradient(90deg, #7b2ff7, #ff4dbb);
+  color: #fff;
+  border: none;
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-weight: 700;
+  box-shadow: 0 8px 24px rgba(123,47,247,0.18);
+  cursor: pointer;
+}
+
+/* trending badge */
+.badge-trending {
+  display:inline-block;
+  background: rgba(255,255,255,0.95);
+  color:#333;
+  padding:6px 10px;
+  border-radius:16px;
+  font-size:0.75rem;
+  font-weight:700;
+  margin-bottom:8px;
+}
+
+/* tags row */
+.tags-row { margin-top:8px; display:flex; gap:8px; flex-wrap:wrap; }
+.tag { background: rgba(255,255,255,0.06); padding:6px 10px; border-radius:12px; font-size:0.8rem; }
+
+/* fallback placeholders */
+.placeholder { color: var(--text-muted); padding: 1rem; }
+
+/* немного подправим trending-card чтобы соответствовало макету */
+.trending-card { min-height: 220px; border-radius: 18px; display:block; position:relative; overflow:hidden; }
+.trending-card .no-image { width:100%; height:100%; background: linear-gradient(90deg,#7b2ff7,#ff7ab6); }
+.trending-card img { transition: transform .45s ease; }
+.trending-card:hover img { transform: scale(1.06); }
+
+/* компактные мета внутри карточки */
+.card-meta { display:flex; justify-content:flex-end; gap:8px; }
+
+/* ensure room-icon has image if provided */
+.room-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 14px;
+  background-size:cover;
+  background-position:center;
+  flex-shrink:0;
+}
 
 /* --- Переменные --- */
 :root {
