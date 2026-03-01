@@ -1815,6 +1815,9 @@ components:
           type: integer
         comments:
           type: integer
+        liked:
+          type: boolean
+          description: Whether the authenticated user has liked this post (only present for authenticated requests)
 
     AestheticRoom:
       type: object
@@ -1839,6 +1842,9 @@ components:
           type: integer
         trending:
           type: boolean
+        joined:
+          type: boolean
+          description: Whether the authenticated user has joined this room (only present for authenticated requests)
         posts:
           type: array
           description: Array of moodboard posts in this aesthetic room

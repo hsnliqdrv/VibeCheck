@@ -10,6 +10,15 @@ from app.services.badge_service import BadgeService
 social_bp = Blueprint('social', __name__)
 
 
+def _get_optional_user_id():
+    """Return current user id when JWT is valid and present; otherwise None."""
+    try:
+        verify_jwt_in_request(optional=True)
+        return get_jwt_identity()
+    except Exception:
+        return None
+
+
 # ──────────────────────────────────────────────
 # POST ENDPOINTS
 # ──────────────────────────────────────────────
@@ -74,9 +83,22 @@ def get_community_posts():
         
         # Paginate
         posts = query.limit(limit).offset(offset).all()
+
+        posts_data = [post.to_dict() for post in posts]
+
+        current_user_id = _get_optional_user_id()
+        if current_user_id and posts:
+            post_ids = [post.id for post in posts]
+            liked_post_rows = db.query(PostLike.post_id).filter(
+                PostLike.user_id == current_user_id,
+                PostLike.post_id.in_(post_ids),
+            ).all()
+            liked_post_ids = {post_id for (post_id,) in liked_post_rows}
+            for post_data in posts_data:
+                post_data['liked'] = post_data['id'] in liked_post_ids
         
         return jsonify({
-            'posts': [post.to_dict() for post in posts],
+            'posts': posts_data,
             'limit': limit,
             'offset': offset,
             'total': query.count()
@@ -810,8 +832,21 @@ def get_rooms():
         total = query.count()
         rooms = query.order_by(desc(AestheticRoom.member_count)).limit(limit).offset(offset).all()
 
+        rooms_data = [room.to_dict() for room in rooms]
+
+        current_user_id = _get_optional_user_id()
+        if current_user_id and rooms:
+            room_ids = [room.id for room in rooms]
+            joined_room_rows = db.query(RoomMember.room_id).filter(
+                RoomMember.user_id == current_user_id,
+                RoomMember.room_id.in_(room_ids),
+            ).all()
+            joined_room_ids = {room_id for (room_id,) in joined_room_rows}
+            for room_data in rooms_data:
+                room_data['joined'] = room_data['id'] in joined_room_ids
+
         return jsonify({
-            'data': [r.to_dict() for r in rooms],
+            'data': rooms_data,
             'total': total,
             'limit': limit,
             'offset': offset,
@@ -846,7 +881,17 @@ def get_room(room_id):
         room = db.query(AestheticRoom).filter_by(id=room_id).first()
         if not room:
             return jsonify({'error': 'Not Found', 'message': 'Room not found'}), 404
-        return jsonify(room.to_dict()), 200
+
+        room_data = room.to_dict()
+        current_user_id = _get_optional_user_id()
+        if current_user_id:
+            joined = db.query(RoomMember).filter_by(
+                room_id=room_id,
+                user_id=current_user_id,
+            ).first() is not None
+            room_data['joined'] = joined
+
+        return jsonify(room_data), 200
     except Exception as e:
         return jsonify({'error': 'Internal Server Error', 'message': str(e)}), 500
 
@@ -891,8 +936,21 @@ def get_room_posts(room_id):
         total = query.count()
         posts = query.limit(limit).offset(offset).all()
 
+        posts_data = [post.to_dict() for post in posts]
+
+        current_user_id = _get_optional_user_id()
+        if current_user_id and posts:
+            post_ids = [post.id for post in posts]
+            liked_post_rows = db.query(PostLike.post_id).filter(
+                PostLike.user_id == current_user_id,
+                PostLike.post_id.in_(post_ids),
+            ).all()
+            liked_post_ids = {post_id for (post_id,) in liked_post_rows}
+            for post_data in posts_data:
+                post_data['liked'] = post_data['id'] in liked_post_ids
+
         return jsonify({
-            'data': [p.to_dict() for p in posts],
+            'data': posts_data,
             'total': total,
             'limit': limit,
             'offset': offset,

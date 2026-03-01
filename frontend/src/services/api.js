@@ -84,6 +84,30 @@ export const getUserBadges = (params = {}) =>
 export const getUserBadgesById = (userId) =>
   api.get(`/badges/user/${userId}`).then((r) => r.data);
 
+// Social - Rooms
+export const getAestheticRooms = (params = {}) =>
+  api.get("/social/rooms", { params }).then((r) => r.data);
+export const getRoomById = (roomId) =>
+  api.get(`/social/rooms/${roomId}`).then((r) => r.data);
+export const getRoomPosts = (roomId, params = {}) =>
+  api.get(`/social/rooms/${roomId}/posts`, { params }).then((r) => r.data);
+export const createRoomPost = (roomId, body) =>
+  api.post(`/social/rooms/${roomId}/posts`, body).then((r) => r.data);
+export const joinRoom = (roomId) =>
+  api.post(`/social/rooms/${roomId}/join`).then((r) => r.data);
+export const leaveRoom = (roomId) =>
+  api.post(`/social/rooms/${roomId}/leave`).then((r) => r.data);
+
+// Social - Post interactions
+export const likePost = (postId) =>
+  api.post(`/social/posts/${postId}/like`).then((r) => r.data);
+export const unlikePost = (postId) =>
+  api.delete(`/social/posts/${postId}/like`).then((r) => r.data);
+export const getPostComments = (postId, params = {}) =>
+  api.get(`/social/posts/${postId}/comments`, { params }).then((r) => r.data);
+export const addComment = (postId, body) =>
+  api.post(`/social/posts/${postId}/comments`, body).then((r) => r.data);
+
 const CATEGORY_FETCHERS = {
   cinema: getMovies,
   music: getAlbums,
