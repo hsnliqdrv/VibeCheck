@@ -1285,6 +1285,83 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '404':
           $ref: '#/components/responses/NotFound'
+    post:
+      tags:
+        - Social
+      summary: Create a post inside a specific room
+      operationId: createRoomPost
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: roomId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The ID of the room to post in
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - category
+                - title
+                - image
+              properties:
+                category:
+                  type: string
+                  enum: [cinema, music, games, books, travel]
+                  description: Content category
+                title:
+                  type: string
+                  maxLength: 255
+                  description: Post title
+                image:
+                  type: string
+                  format: uri
+                  description: Image URL
+                dominantColor:
+                  type: string
+                  pattern: '^#[0-9A-Fa-f]{6}$'
+                  description: Dominant color as hex code (e.g., #FF5733)
+            example:
+              category: cinema
+              title: "Just watched this masterpiece"
+              image: "https://example.com/movie-poster.jpg"
+              dominantColor: "#FF5733"
+      responses:
+        '201':
+          description: Post created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  post:
+                    $ref: '#/components/schemas/MoodboardPost'
+              example:
+                message: "Post created successfully"
+                post:
+                  id: "p_abc123"
+                  userId: "u_user123"
+                  category: "cinema"
+                  title: "Just watched this masterpiece"
+                  image: "https://example.com/movie-poster.jpg"
+                  dominantColor: "#FF5733"
+                  timestamp: "2026-03-01T12:00:00Z"
+                  likes: 0
+                  comments: 0
+                  roomId: "r_room123"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFound'
 
   /social/rooms/{roomId}/join:
     post:
