@@ -506,6 +506,42 @@
     transform: scale(1.15);
 }
 
+/* Social media links in discover cards */
+.ds-social-links {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 4px;
+}
+.ds-social-link {
+    display: grid;
+    place-items: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+    background: rgba(107, 107, 248, 0.08);
+    color: #6b6bf8;
+    transition: all 0.22s ease;
+    text-decoration: none;
+}
+.ds-social-link:hover {
+    background: rgba(107, 107, 248, 0.18);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(107, 107, 248, 0.2);
+}
+.ds-social-link--instagram  { color: #E1306C; background: rgba(225, 48, 108, 0.08); }
+.ds-social-link--instagram:hover { background: rgba(225, 48, 108, 0.18); box-shadow: 0 4px 12px rgba(225, 48, 108, 0.2); }
+.ds-social-link--twitter     { color: #fff; background: rgba(0, 0, 0, 0.85); }
+.ds-social-link--twitter:hover { background: rgba(0, 0, 0, 1); }
+.ds-social-link--tiktok      { color: #010101; background: rgba(1, 1, 1, 0.06); }
+.ds-social-link--tiktok:hover { background: rgba(1, 1, 1, 0.14); }
+.ds-social-link--youtube     { color: #FF0000; background: rgba(255, 0, 0, 0.06); }
+.ds-social-link--youtube:hover { background: rgba(255, 0, 0, 0.14); box-shadow: 0 4px 12px rgba(255, 0, 0, 0.15); }
+.ds-social-link--spotify     { color: #1DB954; background: rgba(29, 185, 84, 0.08); }
+.ds-social-link--spotify:hover { background: rgba(29, 185, 84, 0.18); box-shadow: 0 4px 12px rgba(29, 185, 84, 0.2); }
+.ds-social-link--twitch      { color: #9146FF; background: rgba(145, 70, 255, 0.08); }
+.ds-social-link--twitch:hover { background: rgba(145, 70, 255, 0.18); box-shadow: 0 4px 12px rgba(145, 70, 255, 0.2); }
+
 .ds-actions {
     display: grid;
     grid-template-columns: 1fr 1fr auto;

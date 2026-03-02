@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { login as loginUser } from "./services/api";
 
 export default function Login() {
@@ -31,11 +31,19 @@ export default function Login() {
       window.dispatchEvent(new Event("auth-changed"));
       navigate("/stories");
     } catch (error) {
-      const message =
+      let message =
         error.response?.data?.message ||
         error.response?.data?.error ||
         error.message ||
         "Login failed.";
+
+      // 403 = email not verified
+      if (error.response?.status === 403) {
+        message =
+          error.response?.data?.message ||
+          "Your email is not verified. Please check your inbox for a verification link.";
+      }
+
       setStatus({ loading: false, error: message, success: "" });
     }
   };
@@ -73,6 +81,12 @@ export default function Login() {
           <button className="auth-button" type="submit" disabled={status.loading}>
             {status.loading ? "Signing in..." : "Login"}
           </button>
+          <p className="auth-footer-text">
+            <Link to="/forgot-password">Forgot password?</Link>
+          </p>
+          <p className="auth-footer-text">
+            Don't have an account? <Link to="/register">Register</Link>
+          </p>
         </form>
       </div>
     </div>

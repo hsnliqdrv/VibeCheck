@@ -109,7 +109,7 @@ export default function StoryCard({
 
   useEffect(() => {
     setImgError(false);
-    // Append a unique parameter to bypass htmlToImage caching bugs across content switches
+    // bust cache on content switch
     setImageSrc(image ? `${image}${image.includes('?') ? '&' : '?'}cb=${content?.id || Date.now()}` : null);
   }, [image, content?.id]);
 
