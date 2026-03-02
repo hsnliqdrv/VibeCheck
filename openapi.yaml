@@ -80,6 +80,8 @@ paths:
                   username: aesthetic_anna
         '401':
           $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          description: Email not verified. Please verify your email before logging in.
         '400':
           $ref: '#/components/responses/BadRequest'
 
@@ -88,6 +90,7 @@ paths:
       tags:
         - User Profile
       summary: User registration
+      description: User registration requires email verification. A verification email will be sent to the registered email address.
       operationId: registerUser
       requestBody:
         required: true
@@ -112,20 +115,153 @@ paths:
                   maxLength: 20
       responses:
         '201':
-          description: Registration successful
+          description: Registration successful. Verification email sent. User must verify email before being able to login.
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  token:
+                  message:
                     type: string
                   user:
                     $ref: '#/components/schemas/User'
+                  emailVerificationRequired:
+                    type: boolean
         '400':
           $ref: '#/components/responses/BadRequest'
         '409':
           description: Email or username already exists
+
+  /auth/verify-email:
+    get:
+      tags:
+        - User Profile
+      summary: Verify user email
+      description: Verify email address using the verification token from the email link. User clicks the link in the email which contains the token as a URL parameter.
+      operationId: verifyEmail
+      parameters:
+        - name: token
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Email verification token received in the verification email
+      responses:
+        '200':
+          description: Email verified successfully. Shows verification confirmation page.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  token:
+                    type: string
+                    description: JWT authentication token
+                  user:
+                    $ref: '#/components/schemas/User'
+        '400':
+          description: Invalid or expired verification token
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  message:
+                    type: string
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /auth/forgot-password:
+    post:
+      tags:
+        - User Profile
+      summary: Request password reset
+      description: Send password reset email with verification token to user's registered email
+      operationId: forgotPassword
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+              properties:
+                email:
+                  type: string
+                  format: email
+                  description: Email address associated with the account
+            example:
+              email: user@example.com
+      responses:
+        '200':
+          description: Password reset email sent successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          description: User with this email not found
+
+  /auth/reset-password:
+    post:
+      tags:
+        - User Profile
+      summary: Reset user password
+      description: Reset password using the reset token sent via email. Email verification is mandatory for password reset.
+      operationId: resetPassword
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - token
+                - newPassword
+              properties:
+                token:
+                  type: string
+                  description: Password reset token received in the password reset email
+                newPassword:
+                  type: string
+                  format: password
+                  description: New password for the account
+            example:
+              token: "reset_token_abc123xyz"
+              newPassword: "newPassword123"
+      responses:
+        '200':
+          description: Password reset successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        '400':
+          description: Invalid or expired reset token
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  message:
+                    type: string
+        '404':
+          $ref: '#/components/responses/NotFound'
 
   /users/profile:
     get:
@@ -165,6 +301,23 @@ paths:
                 avatar:
                   type: string
                   format: uri
+                socialMediaLinks:
+                  type: array
+                  description: Array of social media links with their respective platforms
+                  items:
+                    type: object
+                    required:
+                      - platform
+                      - url
+                    properties:
+                      platform:
+                        type: string
+                        enum: [instagram, twitter, tiktok, youtube, facebook, linkedin, pinterest, spotify, twitch, other]
+                        description: Social media platform name
+                      url:
+                        type: string
+                        format: uri
+                        description: URL to the user's social media profile
       responses:
         '200':
           description: Profile updated
@@ -1463,6 +1616,21 @@ components:
           format: uri
         bio:
           type: string
+        emailVerified:
+          type: boolean
+          description: Whether the user's email has been verified
+        socialMediaLinks:
+          type: array
+          description: Array of user's social media links
+          items:
+            type: object
+            properties:
+              platform:
+                type: string
+                enum: [instagram, twitter, tiktok, youtube, facebook, linkedin, pinterest, spotify, twitch, other]
+              url:
+                type: string
+                format: uri
         createdAt:
           type: string
           format: date-time
@@ -1718,7 +1886,8 @@ components:
           type: boolean
         unlockedDate:
           type: string
-          format: date-time
+          example: "March 2, 2026"
+          description: Date when the badge was unlocked, formatted as human-readable date (e.g., "March 2, 2026 at 2:55 PM")
         progress:
           type: integer
         maxProgress:
