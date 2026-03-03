@@ -584,7 +584,19 @@ const Rooms = () => {
                                 {(commentsByPost[post.id] || []).length > 0 ? (
                                   (commentsByPost[post.id] || []).map((comment, commentIndex) => (
                                     <div key={comment.id || commentIndex} className="post-comment-item">
-                                      <p className="post-comment-author">{comment.username || 'User'}</p>
+                                      <p 
+                                        className="post-comment-author post-comment-author--clickable"
+                                        onClick={() => {
+                                          const userId = comment.userId || comment.user_id;
+                                          if (userId) {
+                                            handleUsernameClick({ userId });
+                                          }
+                                        }}
+                                        role="button"
+                                        tabIndex={0}
+                                      >
+                                        {comment.username || 'User'}
+                                      </p>
                                       <p className="post-comment-text">{comment.text}</p>
                                     </div>
                                   ))

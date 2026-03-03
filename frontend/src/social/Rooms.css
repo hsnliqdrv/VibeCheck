@@ -885,6 +885,17 @@
   text-decoration-color: #667eea;
 }
 
+/* Clickable comment author */
+.post-comment-author--clickable {
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  transition: text-decoration-color 0.2s;
+}
+.post-comment-author--clickable:hover {
+  text-decoration-color: #667eea;
+}
+
 /* Profile popup */
 .rooms-profile-overlay {
   position: fixed;
