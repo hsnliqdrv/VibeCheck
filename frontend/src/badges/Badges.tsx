@@ -21,7 +21,7 @@ interface Badge {
   unlockedDate?: string;
 }
 
-// Map badge names from seed_gamification.py to lucide-react icons
+// badge name → lucide icon
 const BADGE_NAME_ICONS: Record<string, React.ElementType> = {
   'first steps': Footprints,
   'getting started': PlayCircle,
@@ -56,24 +56,20 @@ const ICON_MAP: Record<string, React.ElementType> = {
 };
 
 function resolveLucideIcon(badge: Badge): React.ElementType {
-  // First, try to match by badge name
   const badgeNameKey = badge.name.toLowerCase();
   if (BADGE_NAME_ICONS[badgeNameKey]) {
     return BADGE_NAME_ICONS[badgeNameKey];
   }
 
-  // Then try icon property
   if (badge.icon && !badge.icon.startsWith('http')) {
     const key = badge.icon.toLowerCase().replace(/\s+/g, '');
     if (ICON_MAP[key]) return ICON_MAP[key];
   }
 
-  // Then try category
   if (badge.category && ICON_MAP[badge.category.toLowerCase()]) {
     return ICON_MAP[badge.category.toLowerCase()];
   }
 
-  // Finally, fall back to rarity
   const r = badge.rarity?.toLowerCase();
   if (r === 'legendary') return Crown;
   if (r === 'epic') return Zap;
@@ -296,7 +292,20 @@ const BadgesPage: React.FC = () => {
 
                 <div className="bg-card-footer">
                   <span className="bg-card-date">
-                    {badge.unlocked ? (badge.unlockedDate ?? '2026') : 'Locked'}
+                    {badge.unlocked
+                      ? badge.unlockedDate
+                        ? (() => {
+                            const d = new Date(badge.unlockedDate);
+                            return isNaN(d.getTime())
+                              ? badge.unlockedDate
+                              : d.toLocaleDateString(undefined, {
+                                  year: 'numeric',
+                                  month: 'short',
+                                  day: 'numeric',
+                                });
+                          })()
+                        : 'Unlocked'
+                      : 'Locked'}
                   </span>
                   <span
                     className="bg-card-dot"

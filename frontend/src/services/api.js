@@ -1,7 +1,6 @@
 import axios from "axios";
 
-// Default to the Apidog mock server for development when VITE_API_BASE_URL isn't set
-const API_BASE = import.meta.env.VITE_API_BASE_URL || "https://mock.apidog.com/m1/1194510-1189388-default";
+const API_BASE = import.meta.env.VITE_API_BASE_URL;
 
 const api = axios.create({
   baseURL: API_BASE,
@@ -14,9 +13,36 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+const AUTH_ONLY_PATHS = ["/auth/login", "/auth/register", "/auth/forgot-password", "/auth/reset-password", "/auth/verify-email"];
+
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const requestPath = error.config?.url || "";
+    const isAuthEndpoint = AUTH_ONLY_PATHS.some((p) => requestPath.includes(p));
+    if (error.response?.status === 401 && !isAuthEndpoint) {
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      window.dispatchEvent(new Event("auth-changed"));
+      window.dispatchEvent(
+        new CustomEvent("show-unauthorized-popup", {
+          detail: { message: "Unauthorized — please log in again." },
+        })
+      );
+    }
+    return Promise.reject(error);
+  }
+);
+
 // Auth
 export const login = (data) => api.post("/auth/login", data).then((r) => r.data);
 export const register = (data) => api.post("/auth/register", data).then((r) => r.data);
+export const verifyEmail = (token) =>
+  api.get("/auth/verify-email", { params: { token } }).then((r) => r.data);
+export const forgotPassword = (email) =>
+  api.post("/auth/forgot-password", { email }).then((r) => r.data);
+export const resetPassword = (token, newPassword) =>
+  api.post("/auth/reset-password", { token, newPassword }).then((r) => r.data);
 
 // Content
 export const getMovies = (params = {}) =>
@@ -107,6 +133,10 @@ export const getPostComments = (postId, params = {}) =>
   api.get(`/social/posts/${postId}/comments`, { params }).then((r) => r.data);
 export const addComment = (postId, body) =>
   api.post(`/social/posts/${postId}/comments`, body).then((r) => r.data);
+
+// Discovery Feed
+export const getDiscoveryFeed = (params = {}) =>
+  api.get("/discovery/feed", { params }).then((r) => r.data);
 
 const CATEGORY_FETCHERS = {
   cinema: getMovies,

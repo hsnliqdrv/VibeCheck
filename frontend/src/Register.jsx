@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { register as registerUser } from "./services/api";
 
 export default function Register() {
@@ -19,17 +19,14 @@ export default function Register() {
 
     try {
       const response = await registerUser(data);
-      const { token, user } = response || {};
 
-      if (!token || !user) {
-        throw new Error("Unexpected response format.");
-      }
-
-      localStorage.setItem("token", token);
-      localStorage.setItem("user", JSON.stringify(user));
-      setStatus({ loading: false, error: "", success: "Account created. You are signed in." });
-      window.dispatchEvent(new Event("auth-changed"));
-      navigate("/stories");
+      setStatus({
+        loading: false,
+        error: "",
+        success:
+          response?.message ||
+          "Account created! Please check your email to verify your account before logging in.",
+      });
     } catch (error) {
       const message =
         error.response?.data?.message ||
@@ -74,9 +71,12 @@ export default function Register() {
           </label>
           {status.error && <div className="auth-message error">{status.error}</div>}
           {status.success && <div className="auth-message success">{status.success}</div>}
-          <button className="auth-button" type="submit" disabled={status.loading}>
+          <button className="auth-button" type="submit" disabled={status.loading || status.success}>
             {status.loading ? "Creating..." : "Create Account"}
           </button>
+          <p className="auth-footer-text">
+            Already have an account? <Link to="/">Login</Link>
+          </p>
         </form>
       </div>
     </div>

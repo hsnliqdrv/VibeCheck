@@ -784,3 +784,52 @@
   margin-top: 6px;
   font-size: 12px;
 }
+
+/* Auth footer text (forgot password, register links, etc.) */
+.auth-footer-text {
+  margin: 0.8rem 0 0;
+  font-size: 0.9rem;
+  text-align: center;
+  color: rgba(29, 27, 34, 0.65);
+}
+.auth-footer-text a {
+  color: #6b6bf8;
+  font-weight: 600;
+  text-decoration: none;
+}
+.auth-footer-text a:hover {
+  text-decoration: underline;
+}
+
+/* Unauthorized popup overlay */
+.unauthorized-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: grid;
+  place-items: center;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(6px);
+  animation: fadeIn 0.25s ease;
+}
+.unauthorized-popup {
+  background: #fff;
+  border-radius: 20px;
+  padding: 2.4rem 2rem;
+  max-width: 400px;
+  width: 90%;
+  text-align: center;
+  box-shadow: 0 24px 60px rgba(16, 18, 30, 0.22);
+}
+.unauthorized-popup h3 {
+  margin: 0 0 0.5rem;
+  font-size: 1.3rem;
+}
+.unauthorized-popup p {
+  margin: 0 0 1.4rem;
+  color: rgba(29, 27, 34, 0.65);
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
