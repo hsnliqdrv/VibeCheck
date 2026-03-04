@@ -19,11 +19,15 @@ import sys
 import pytest
 
 # Ensure the backend root is on sys.path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+# Go up two directories from tests/unit/ to /backend
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
-os.environ['DATABASE_URL'] = 'sqlite:///test_vibecheck.db'
-os.environ['FLASK_ENV'] = 'development'
-os.environ['JWT_SECRET_KEY'] = 'test-secret-key'
+from app.config import Config
+Config.SQLALCHEMY_DATABASE_URI = 'sqlite:///test_vibecheck.db'
+
+# Don't pollute other tests - let app default to sqlite if needed locally or we use a fixture
+os.environ.setdefault('FLASK_ENV', 'development')
+os.environ.setdefault('JWT_SECRET_KEY', 'test-secret-key')
 
 from app import create_app
 
@@ -33,6 +37,7 @@ def app():
     """Create Flask app for testing."""
     application = create_app()
     application.config['TESTING'] = True
+    application.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///test_vibecheck.db'
     yield application
     # Cleanup: remove test database
     db_path = os.path.join(os.path.dirname(__file__), '..', 'test_vibecheck.db')

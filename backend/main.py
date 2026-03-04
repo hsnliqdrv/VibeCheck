@@ -1,4 +1,9 @@
 import os
+from dotenv import load_dotenv
+
+# Load environment variables before doing anything else
+load_dotenv()
+
 from app import create_app
 from app.database import close_db
 

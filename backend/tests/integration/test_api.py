@@ -20,7 +20,7 @@ import string
 def _verify_email(email: str):
     import os
     from sqlalchemy import create_engine, text
-    db_url = os.getenv("DATABASE_URL") or os.getenv("DB_URL") or "postgresql://postgres:postgres@postgres:5432/vibecheck"
+    db_url = os.getenv("DATABASE_URL") or os.getenv("DB_URL") or "postgresql://postgres:postgres@localhost:5433/vibecheck"
     engine = create_engine(db_url)
     with engine.begin() as conn:
         conn.execute(text("UPDATE users SET email_verified = true WHERE email = :email"), {"email": email})
@@ -2573,6 +2573,8 @@ class VibeCheckAPITester:
 # ─────────────────────────────────────────────────────────
 
 import pytest
+
+pytestmark = pytest.mark.integration
 
 @pytest.fixture(scope="session")
 def tester() -> VibeCheckAPITester:
