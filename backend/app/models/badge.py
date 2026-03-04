@@ -31,7 +31,7 @@ class Badge(Base):
             'category': self.category,
             'maxProgress': self.max_progress,
             'unlocked': unlocked,
-            'unlockedDate': unlocked_date.isoformat() if unlocked_date else None,
+            'unlockedDate': unlocked_date.strftime('%B %-d, %Y at %-I:%M %p') if unlocked_date else None,
             'progress': progress,
         }
 

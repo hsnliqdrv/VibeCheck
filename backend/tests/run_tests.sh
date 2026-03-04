@@ -38,37 +38,20 @@ source venv/bin/activate
 
 echo "Installing/updating test dependencies..."
 pip install -q -r test_requirements.txt
+if [ -f "../requirements.txt" ]; then
+    echo "Installing backend dependencies..."
+    pip install -q -r ../requirements.txt
+fi
 
 echo ""
 echo "========================================"
-echo "Running Tests"
+echo "Running Unified Test Suite (pytest)"
 echo "========================================"
 echo ""
 
-# Run the test based on argument
-case "$1" in
-    smoke)
-        echo "Running smoke tests..."
-        python3 smoke_test.py
-        ;;
-    pytest)
-        echo "Running pytest..."
-        pytest test_api.py -v --html=test_report.html --self-contained-html
-        echo ""
-        echo "Report generated: test_report.html"
-        ;;
-    quick)
-        echo "Running quick validation..."
-        python3 test_api.py
-        ;;
-    *)
-        # Default: run full test suite
-        echo "Running full test suite..."
-        python3 test_api.py
-        ;;
-esac
+pytest -v --html=test_report.html --self-contained-html
 
 echo ""
 echo "========================================"
-echo "Tests Complete"
+echo "Tests Complete. Report generated: test_report.html"
 echo "========================================"

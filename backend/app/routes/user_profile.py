@@ -1,9 +1,48 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
+import re
 from app.database import get_db
 from app.models.user import User
 
 user_profile_bp = Blueprint('user_profile', __name__)
+
+# Valid social media platforms per OpenAPI contract
+VALID_PLATFORMS = {
+    'instagram', 'twitter', 'tiktok', 'youtube', 'facebook',
+    'linkedin', 'pinterest', 'spotify', 'twitch', 'other'
+}
+
+# Basic URL pattern for validation
+URL_PATTERN = re.compile(
+    r'^https?://'  # http:// or https://
+    r'[^\s/$.?#].'  # domain
+    r'[^\s]*$',     # rest of URL
+    re.IGNORECASE
+)
+
+
+def validate_social_media_links(links):
+    """Validate social media links array. Returns (is_valid, error_message)."""
+    if not isinstance(links, list):
+        return False, 'socialMediaLinks must be an array'
+    
+    for i, link in enumerate(links):
+        if not isinstance(link, dict):
+            return False, f'socialMediaLinks[{i}] must be an object'
+        
+        platform = link.get('platform')
+        url = link.get('url')
+        
+        if not platform or not url:
+            return False, f'socialMediaLinks[{i}] must have both platform and url'
+        
+        if platform not in VALID_PLATFORMS:
+            return False, f'Invalid platform "{platform}". Must be one of: {", ".join(sorted(VALID_PLATFORMS))}'
+        
+        if not URL_PATTERN.match(url):
+            return False, f'Invalid URL for {platform}: "{url}"'
+    
+    return True, None
 
 
 @user_profile_bp.route('/profile', methods=['GET'])
@@ -19,43 +58,8 @@ def get_user_profile():
     responses:
       200:
         description: User profile retrieved
-        schema:
-          type: object
-          properties:
-            userId:
-              type: string
-              example: u_123abc456def
-            email:
-              type: string
-              example: user@example.com
-            username:
-              type: string
-              example: aesthetic_anna
-            avatar:
-              type: string
-              nullable: true
-              example: https://example.com/avatar.jpg
-            bio:
-              type: string
-              nullable: true
-              example: "Lover of minimalist aesthetics"
-            createdAt:
-              type: string
-              format: date-time
-            updatedAt:
-              type: string
-              format: date-time
       401:
         description: Unauthorized - authentication required
-        schema:
-          type: object
-          properties:
-            error:
-              type: string
-              example: Unauthorized
-            message:
-              type: string
-              example: Missing or invalid authentication token
     """
     try:
         # Get current user ID from JWT token
@@ -103,62 +107,27 @@ def update_user_profile():
             bio:
               type: string
               maxLength: 500
-              example: "Lover of minimalist aesthetics"
             avatar:
               type: string
               format: uri
-              example: https://example.com/avatar.jpg
+            socialMediaLinks:
+              type: array
+              items:
+                type: object
+                properties:
+                  platform:
+                    type: string
+                    enum: [instagram, twitter, tiktok, youtube, facebook, linkedin, pinterest, spotify, twitch, other]
+                  url:
+                    type: string
+                    format: uri
     responses:
       200:
         description: Profile updated successfully
-        schema:
-          type: object
-          properties:
-            userId:
-              type: string
-              example: u_123abc456def
-            email:
-              type: string
-              example: user@example.com
-            username:
-              type: string
-              example: aesthetic_anna
-            avatar:
-              type: string
-              nullable: true
-              example: https://example.com/avatar.jpg
-            bio:
-              type: string
-              nullable: true
-              example: "Lover of minimalist aesthetics"
-            createdAt:
-              type: string
-              format: date-time
-            updatedAt:
-              type: string
-              format: date-time
       400:
         description: Bad request - validation error
-        schema:
-          type: object
-          properties:
-            error:
-              type: string
-              example: Bad Request
-            message:
-              type: string
-              example: Bio must be 500 characters or less
       401:
         description: Unauthorized - authentication required
-        schema:
-          type: object
-          properties:
-            error:
-              type: string
-              example: Unauthorized
-            message:
-              type: string
-              example: Missing or invalid authentication token
     """
     db = None
     try:
@@ -198,6 +167,17 @@ def update_user_profile():
         if 'avatar' in data:
             user.avatar = data['avatar']
         
+        # Handle socialMediaLinks
+        if 'socialMediaLinks' in data:
+            links = data['socialMediaLinks']
+            is_valid, error_msg = validate_social_media_links(links)
+            if not is_valid:
+                return jsonify({
+                    'error': 'Bad Request',
+                    'message': error_msg
+                }), 400
+            user.social_media_links = links
+        
         # Commit changes
         db.commit()
         db.refresh(user)
@@ -226,47 +206,11 @@ def get_user_by_id(user_id):
         type: string
         required: true
         description: User ID
-        example: u_123abc456def
     responses:
       200:
         description: User profile retrieved
-        schema:
-          type: object
-          properties:
-            userId:
-              type: string
-              example: u_123abc456def
-            email:
-              type: string
-              example: user@example.com
-            username:
-              type: string
-              example: aesthetic_anna
-            avatar:
-              type: string
-              nullable: true
-              example: https://example.com/avatar.jpg
-            bio:
-              type: string
-              nullable: true
-              example: "Lover of minimalist aesthetics"
-            createdAt:
-              type: string
-              format: date-time
-            updatedAt:
-              type: string
-              format: date-time
       404:
         description: User not found
-        schema:
-          type: object
-          properties:
-            error:
-              type: string
-              example: Not Found
-            message:
-              type: string
-              example: User not found
     """
     try:
         # Get database session

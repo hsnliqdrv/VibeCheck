@@ -10,4 +10,5 @@ from app.routes.social import social_bp
 # __all__ = ['auth_bp', 'content_bp', 'search_bp', 'user_profile_bp', 'aura_bp', 'social_bp', 'badges_bp', 'curator_bp']
 
 from app.routes.gamification import gamification_bp
-__all__ = ['auth_bp', 'content_bp', 'search_bp', 'user_profile_bp', 'aura_bp', 'social_bp', 'gamification_bp']
+from app.routes.discovery import discovery_bp
+__all__ = ['auth_bp', 'content_bp', 'search_bp', 'user_profile_bp', 'aura_bp', 'social_bp', 'gamification_bp', 'discovery_bp']
