@@ -47,7 +47,9 @@ class Badge(Base):
         # Add user-specific fields if UserBadge provided
         if user_badge:
             result['unlocked'] = True
-            result['unlockedDate'] = user_badge.earned_at.strftime('%B %-d, %Y at %-I:%M %p')
+            earned_at = user_badge.earned_at
+            time_str = earned_at.strftime('%I:%M %p').lstrip('0')
+            result['unlockedDate'] = f"{earned_at.strftime('%B')} {earned_at.day}, {earned_at.year} at {time_str}"
             result['progress'] = user_badge.progress if hasattr(user_badge, 'progress') else None
             result['maxProgress'] = user_badge.max_progress if hasattr(user_badge, 'max_progress') else None
         else:

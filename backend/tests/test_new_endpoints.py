@@ -8,9 +8,9 @@ Tests for new backend features:
 
 Uses Flask test client (no running server needed).
 
-Usage:
-    cd /Users/zeynab/Documents/GitHub/VibeCheck/backend
-    python -m pytest tests/test_new_endpoints.py -v
+Usage (from the repository root):
+    cd <repo-root>
+    pytest backend/tests/test_new_endpoints.py -v
 """
 
 import os
