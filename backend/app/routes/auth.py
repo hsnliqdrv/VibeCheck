@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import create_access_token
 from sqlalchemy.exc import IntegrityError
 from email_validator import validate_email, EmailNotValidError
@@ -277,13 +277,14 @@ def register():
                 'message': 'Email or username already exists'
             }), 409
         
-        # Log verification URL (no real email sending)
-        verification_url = f"http://localhost:3000/api/v1/auth/verify-email?token={raw_token}"
-        print(f"\n{'='*60}")
-        print(f"📧 EMAIL VERIFICATION for {email}")
-        print(f"   Token: {raw_token}")
-        print(f"   URL:   {verification_url}")
-        print(f"{'='*60}\n")
+        # Log verification URL only in debug/development mode
+        if current_app.debug:
+            verification_url = f"http://localhost:3000/api/v1/auth/verify-email?token={raw_token}"
+            print(f"\n{'='*60}")
+            print(f"📧 EMAIL VERIFICATION for {email}")
+            print(f"   Token: {raw_token}")
+            print(f"   URL:   {verification_url}")
+            print(f"{'='*60}\n")
         
         # Do NOT issue JWT at registration — user must verify email first
         return jsonify({
@@ -459,13 +460,14 @@ def forgot_password():
             raw_token = user.generate_reset_token()
             db.commit()
             
-            # Log reset URL (no real email sending)
-            reset_url = f"http://localhost:3000/reset-password?token={raw_token}"
-            print(f"\n{'='*60}")
-            print(f"🔑 PASSWORD RESET for {email}")
-            print(f"   Token: {raw_token}")
-            print(f"   URL:   {reset_url}")
-            print(f"{'='*60}\n")
+            # Log reset URL only in debug/development mode
+            if current_app.debug:
+                reset_url = f"http://localhost:3000/reset-password?token={raw_token}"
+                print(f"\n{'='*60}")
+                print(f"🔑 PASSWORD RESET for {email}")
+                print(f"   Token: {raw_token}")
+                print(f"   URL:   {reset_url}")
+                print(f"{'='*60}\n")
         
         return jsonify({
             'message': success_message

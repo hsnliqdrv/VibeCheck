@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
-import re
+from urllib.parse import urlparse
 from app.database import get_db
 from app.models.user import User
 
@@ -12,13 +12,14 @@ VALID_PLATFORMS = {
     'linkedin', 'pinterest', 'spotify', 'twitch', 'other'
 }
 
-# Basic URL pattern for validation
-URL_PATTERN = re.compile(
-    r'^https?://'  # http:// or https://
-    r'[^\s/$.?#].'  # domain
-    r'[^\s]*$',     # rest of URL
-    re.IGNORECASE
-)
+
+def _is_valid_url(url: str) -> bool:
+    """Validate that url has an http(s) scheme and a non-empty netloc."""
+    try:
+        parsed = urlparse(url)
+        return parsed.scheme in ('http', 'https') and bool(parsed.netloc)
+    except Exception:
+        return False
 
 
 def validate_social_media_links(links):
@@ -39,7 +40,7 @@ def validate_social_media_links(links):
         if platform not in VALID_PLATFORMS:
             return False, f'Invalid platform "{platform}". Must be one of: {", ".join(sorted(VALID_PLATFORMS))}'
         
-        if not URL_PATTERN.match(url):
+        if not _is_valid_url(url):
             return False, f'Invalid URL for {platform}: "{url}"'
     
     return True, None

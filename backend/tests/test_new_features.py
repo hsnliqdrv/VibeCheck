@@ -14,6 +14,8 @@ import requests
 import random
 import string
 
+pytestmark = pytest.mark.integration
+
 BASE_URL = "http://localhost:3000/api/v1"
 
 
@@ -28,7 +30,7 @@ def _rand(n: int = 8) -> str:
 def _verify_email(email: str):
     import os
     from sqlalchemy import create_engine, text
-    db_url = "postgresql://postgres:postgres@postgres:5432/vibecheck"
+    db_url = os.getenv("DATABASE_URL") or os.getenv("DB_URL") or "postgresql://postgres:postgres@postgres:5432/vibecheck"
     engine = create_engine(db_url)
     with engine.begin() as conn:
         conn.execute(text("UPDATE users SET email_verified = true WHERE email = :email"), {"email": email})

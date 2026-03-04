@@ -5,6 +5,7 @@ import pytest
 sys.path.insert(0, os.path.dirname(__file__))
 from test_api import VibeCheckAPITester
 
+@pytest.mark.integration
 def test_legacy_api_endpoints():
     """
     Unified test wrapper for all legacy API endpoints.
