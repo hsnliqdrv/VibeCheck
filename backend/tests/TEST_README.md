@@ -4,256 +4,159 @@ Comprehensive test suite for the VibeCheck backend API based on the OpenAPI spec
 
 ## 📋 Test Coverage
 
-The test suite covers all 17 MVP endpoints:
+The test suite covers the full API surface across **270+ test cases**:
 
-### Authentication (4 tests)
-- ✅ POST `/auth/register` - User registration
-- ✅ POST `/auth/register` - Duplicate email validation
-- ✅ POST `/auth/login` - User login
-- ✅ POST `/auth/login` - Invalid credentials check
+### Authentication
+- POST `/auth/register` — User registration + duplicate email validation
+- POST `/auth/login` — Login + invalid credentials check
+- Email verification flow (register → verify → login gating)
+- Forgot password / reset password flow
 
-### User Profile (3 tests)
-- ✅ GET `/users/profile` - Get current user profile
-- ✅ PUT `/users/profile` - Update user profile
-- ✅ GET `/users/{userId}` - Get user by ID
+### User Profile
+- GET `/users/profile` — Get current user profile
+- PUT `/users/profile` — Update user profile (including `socialMediaLinks` validation)
+- GET `/users/{userId}` — Get user by ID
 
-### Content - Movies (3 tests)
-- ✅ GET `/content/movies` - List movies
-- ✅ GET `/content/movies?search=...` - Search movies
-- ✅ GET `/content/movies/{movieId}` - Get movie details
+### Content (Movies, Albums, Games, Books, Locations)
+Each category supports:
+- `GET /content/{category}` — List items
+- `GET /content/{category}?search=...` — Search / filter
+- `GET /content/{category}/{id}` — Get item details
 
-### Content - Albums (3 tests)
-- ✅ GET `/content/albums` - List albums
-- ✅ GET `/content/albums?search=...` - Search albums
-- ✅ GET `/content/albums/{albumId}` - Get album details
+### Search
+- GET `/search?query=...` — Global search
+- GET `/search?query=...&categories=...` — Filtered search
 
-### Content - Games (3 tests)
-- ✅ GET `/content/games` - List games
-- ✅ GET `/content/games?platform=...` - Filter games
-- ✅ GET `/content/games/{gameId}` - Get game details
+### Aura Profile
+- GET `/aura/profile` — Get current user's aura
+- PUT `/aura/profile` — Update aura profile
+- GET `/aura/profile/{userId}` — Get user's aura by ID
+- Aura inference — Auto-generated aesthetic tags and colors
 
-### Content - Books (3 tests)
-- ✅ GET `/content/books` - List books
-- ✅ GET `/content/books?search=...` - Search books
-- ✅ GET `/content/books/{bookId}` - Get book details
+### Shares
+- POST `/aura/shares` — Create a new share
+- GET `/aura/shares` — Get user's shares
 
-### Content - Locations (3 tests)
-- ✅ GET `/content/locations` - List locations
-- ✅ GET `/content/locations?country=...` - Filter locations
-- ✅ GET `/content/locations/{locationId}` - Get location details
+### Social / Rooms
+- Room CRUD (create, list, get, join, leave)
+- Room posts (create, list)
+- Trending rooms
 
-### Search (2 tests)
-- ✅ GET `/search?query=...` - Global search
-- ✅ GET `/search?query=...&categories=...` - Filtered search
+### Discovery
+- GET `/discovery/feed` — Discovery feed endpoint
 
-### Aura Profile (3 tests)
-- ✅ GET `/aura/profile` - Get current user's aura
-- ✅ PUT `/aura/profile` - Update aura profile
-- ✅ GET `/aura/profile/{userId}` - Get user's aura by ID
+### Gamification & Badges
+- Curator levels, XP, streaks
+- Badge system with rarities
+- Badge date formatting
 
-### Shares (2 tests)
-- ✅ POST `/aura/shares` - Create new share
-- ✅ GET `/aura/shares` - Get user's shares
+## 🏗️ Test Structure
 
-**Total: 30+ test cases**
+Tests are split into two directories for easy execution:
 
-## 🚀 Quick Start
+```
+backend/tests/
+├── unit/                          # Fast, no Docker needed
+│   └── test_new_endpoints.py      # 32 tests — Flask test client + SQLite
+├── integration/                   # Requires running server + PostgreSQL
+│   ├── test_api.py                # ~211 tests — Full API via VibeCheckAPITester
+│   ├── test_new_features.py       # 35 tests — Aura inference & rooms
+│   └── test_legacy_wrapper.py     # Pytest wrapper for test_api.py
+├── pytest.ini                     # Config (warnings, logging, markers)
+└── test_requirements.txt          # Test dependencies
+```
 
-### Installation
+### Unit Tests (`tests/unit/`)
+
+Run with an **in-memory SQLite** database using the Flask test client. No server or Docker required.
 
 ```bash
-# Install test dependencies
-pip install -r test_requirements.txt
-
-# Or install manually
-pip install pytest requests pytest-html
+cd backend
+pytest tests/unit/
 ```
 
-### Running Tests
+**What's tested:**
+- Email verification gating (register → must verify → then login)
+- Forgot password / reset password flow
+- `socialMediaLinks` field validation
+- Badge date formatting
+- Discovery feed endpoint
 
-#### Option 1: Standalone Script (Recommended for quick checks)
+### Integration Tests (`tests/integration/`)
+
+Run against a **live Flask server** backed by PostgreSQL. Requires Docker.
 
 ```bash
-# Run with default URL (http://localhost:3000/api/v1)
-python test_api.py
+# Start the database
+docker compose up -d db
 
-# Run with custom URL
-python test_api.py --url http://localhost:5000/api/v1
+# Optionally start the full backend
+docker compose up -d
 
-# Run with deployed API
-python test_api.py --url https://api.vibecheck.com/api/v1
+# Run
+cd backend
+pytest tests/integration/
 ```
 
-#### Option 2: Pytest (Recommended for CI/CD)
+**What's tested:**
+- All 30+ OpenAPI endpoints (auth, content, search, aura, shares, social)
+- Aura inference (auto aesthetic tags and colors)
+- Aesthetic rooms (CRUD, join/leave, posts)
+
+## 🚀 Running Tests
 
 ```bash
-# Run all tests with verbose output
-pytest test_api.py -v
+# Run everything
+cd backend
+pytest tests/
 
-# Run with HTML report
-pytest test_api.py -v --html=report.html --self-contained-html
+# Unit only (fast)
+pytest tests/unit/
 
-# Run specific test
-pytest test_api.py::test_login -v
+# Integration only (needs Docker)
+pytest tests/integration/
 
-# Run tests matching pattern
-pytest test_api.py -k "movies" -v
+# Verbose
+pytest tests/unit/ -v
 
-# Run with JSON report
-pytest test_api.py --json-report --json-report-file=report.json
-```
+# Single file
+pytest tests/unit/test_new_endpoints.py -v
 
-## 📊 Output Examples
+# Single test
+pytest tests/unit/test_new_endpoints.py::test_forgot_password -v
 
-### Standalone Script Output
+# Pattern match
+pytest tests/ -k "auth"
 
-```
-======================================================================
-VibeCheck API Test Suite
-======================================================================
-Base URL: http://localhost:3000/api/v1
-======================================================================
-
-🏥 Health Check
-----------------------------------------------------------------------
-✓ PASS | Health Check | Status: 200
-
-🔐 Authentication Tests
-----------------------------------------------------------------------
-✓ PASS | POST /auth/register | Status: 201
-✓ PASS | POST /auth/register (duplicate check) | Status: 409
-✓ PASS | POST /auth/login | Status: 200
-✓ PASS | POST /auth/login (invalid credentials) | Status: 401
-
-...
-
-======================================================================
-Test Summary
-======================================================================
-Total Tests: 30
-Passed: 28 ✓
-Failed: 2 ✗
-Success Rate: 93.3%
-======================================================================
-```
-
-### Pytest Output
-
-```
-test_api.py::test_health PASSED                                  [  3%]
-test_api.py::test_register PASSED                                [  6%]
-test_api.py::test_login PASSED                                   [ 10%]
-test_api.py::test_get_movies PASSED                              [ 13%]
-...
-
-========================== 28 passed, 2 failed in 12.43s ==========================
+# Re-run last failed
+pytest tests/ --lf
 ```
 
 ## 🔧 Configuration
 
-### Environment Variables
+### pytest.ini
 
-You can set these before running tests:
+Located at `tests/pytest.ini`, pre-configured to:
+- **Suppress warnings**: `DeprecationWarning` filtered out (handles `datetime.utcnow()` on Python 3.12+)
+- **Silence logs**: `log_cli = false` prevents SQLAlchemy from flooding test output
+- **Strict markers**: Enforces declared markers only
+- **Short tracebacks**: Cleaner failure output
 
-```bash
-# Example: Test against staging
-export BASE_URL=https://staging-api.vibecheck.com/api/v1
-python test_api.py --url $BASE_URL
-```
+### Environment
 
-### Test Customization
+`python-dotenv` is installed in the backend, so running `pytest` locally will automatically load variables from your `.env` file — the same file Docker uses.
 
-Edit `test_api.py` to customize:
-
-- Default base URL
-- Test data (usernames, passwords)
-- Timeout settings
-- Expected response structures
-
-## 📝 Test Structure
-
-The test suite is organized into a class-based structure:
-
-```python
-class VibeCheckAPITester:
-    def test_health()               # Health check
-    def test_register()             # Auth tests
-    def test_login()
-    def test_get_profile()          # Profile tests
-    def test_get_movies()           # Content tests
-    def test_global_search()        # Search tests
-    def test_get_current_user_aura() # Aura tests
-    def test_create_share()         # Shares tests
-```
-
-Each test method:
-1. Sends HTTP request to the endpoint
-2. Validates response status code
-3. Checks response structure (when applicable)
-4. Logs results with ✓/✗ indicators
-
-## 🧪 Before Running Tests
-
-### 1. Start the Backend
+### Test Dependencies
 
 ```bash
-cd backend
-docker compose up --build
-
-# Or without Docker
-python main.py
+pip install -r tests/test_requirements.txt
 ```
 
-### 2. Verify Backend is Running
-
-```bash
-curl http://localhost:3000/api/v1/health
-```
-
-Expected response:
-```json
-{
-  "status": "healthy",
-  "service": "VibeCheck API"
-}
-```
-
-### 3. Ensure Database is Ready
-
-The backend should automatically create tables on startup. Check logs for:
-```
-INFO: Database tables created successfully
-```
-
-## 🎯 Testing Strategies
-
-### Smoke Testing
-Quick validation that the API is up and functioning:
-```bash
-python test_api.py
-```
-
-### Integration Testing
-Full test suite with detailed reporting:
-```bash
-pytest test_api.py -v --html=report.html
-```
-
-### Continuous Integration
-Add to your CI/CD pipeline:
-```yaml
-# .github/workflows/test.yml
-- name: Run API Tests
-  run: |
-    pip install -r test_requirements.txt
-    pytest test_api.py -v --json-report
-```
-
-### Load Testing
-For performance testing, consider using:
-- Apache JMeter
-- Locust
-- k6
+Contents:
+- `pytest` — Test framework
+- `requests` — HTTP client for integration tests
+- `pytest-html` — HTML report generation
+- `pytest-json-report` — JSON report generation
 
 ## 🐛 Troubleshooting
 
@@ -261,119 +164,75 @@ For performance testing, consider using:
 ```
 Error: Connection refused
 ```
-**Solution**: Ensure backend is running on the correct port
+**Fix:** Start the backend — `docker compose up -d`
+
+### Missing Dependencies
+```
+ModuleNotFoundError: No module named 'requests'
+```
+**Fix:** `pip install -r tests/test_requirements.txt`
 
 ### 401 Unauthorized
 ```
 ✗ FAIL | GET /users/profile | Status: 401
 ```
-**Solution**: Check JWT token generation in login/register
+**Fix:** Ensure `JWT_SECRET_KEY` in `.env` is consistent between app and tests
 
-### 404 Not Found
-```
-✗ FAIL | GET /content/movies/{movieId} | Status: 404
-```
-**Solution**: Ensure external API integrations are working
+### Noisy Log Output
+Already handled by `pytest.ini` configuration. If you still see noise, verify `log_cli = false` is set.
 
-### Timeout Errors
-```
-Error: Request timeout
-```
-**Solution**: Increase timeout in requests or check external API response times
+## 🧪 Before Running Integration Tests
+
+1. **Start the backend:**
+   ```bash
+   cd backend
+   docker compose up --build -d
+   ```
+
+2. **Verify it's running:**
+   ```bash
+   curl http://localhost:3000/api/v1/health
+   ```
+   Expected: `{"status": "healthy", "service": "VibeCheck API"}`
+
+3. **Run:**
+   ```bash
+   pytest tests/integration/ -v
+   ```
 
 ## 📈 Advanced Usage
 
-### Custom Test Scenarios
+### Generate HTML Report
+```bash
+pytest tests/ -v --html=tests/test_report.html --self-contained-html
+```
+
+### CI/CD Pipeline
+```yaml
+# .github/workflows/test.yml
+- name: Run Unit Tests
+  run: |
+    pip install -r tests/test_requirements.txt
+    cd backend
+    pytest tests/unit/ -v
+```
+
+### Custom Test Scenarios (Integration)
+
+The `VibeCheckAPITester` class in `test_api.py` can be imported for ad-hoc testing:
 
 ```python
-# Create custom test scenario
+from tests.integration.test_api import VibeCheckAPITester
+
 tester = VibeCheckAPITester()
 tester.test_register()
 tester.test_login()
-tester.test_create_share()
-tester.test_get_user_shares()
-```
-
-### Test Specific Endpoints
-
-```python
-# Test only content endpoints
-tester = VibeCheckAPITester()
 tester.test_get_movies()
-tester.test_get_albums()
-tester.test_get_games()
-tester.test_get_books()
-tester.test_get_locations()
 ```
 
-### Parallel Testing with pytest-xdist
+## 🔗 Resources
 
-```bash
-pip install pytest-xdist
-pytest test_api.py -n 4  # Run with 4 workers
-```
-
-## 📦 Integration with Other Tools
-
-### Postman Import
-Generate Postman collection from OpenAPI spec:
-```bash
-# Use openapi-to-postman converter
-npm install -g openapi-to-postmanv2
-openapi2postmanv2 -s openapi-mvp.yaml -o postman_collection.json
-```
-
-### cURL Examples
-Convert tests to cURL commands for debugging:
-```bash
-# Register
-curl -X POST http://localhost:3000/api/v1/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{"email":"test@test.com","username":"testuser","password":"Test123!"}'
-
-# Login
-curl -X POST http://localhost:3000/api/v1/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"email":"test@test.com","password":"Test123!"}'
-```
-
-## 🔐 Security Considerations
-
-- Test data uses random strings to avoid conflicts
-- Passwords are test-only (not production passwords)
-- Tokens are temporary and session-specific
-- No sensitive data is logged
-
-## 📚 Additional Resources
-
-- [OpenAPI Specification](../openapi-mvp.yaml)
-- [Backend Documentation](README.md)
-- [pytest Documentation](https://docs.pytest.org/)
-- [requests Documentation](https://requests.readthedocs.io/)
-
-## 🤝 Contributing
-
-To add new tests:
-
-1. Add test method to `VibeCheckAPITester` class
-2. Call it from `run_all_tests()` method
-3. Add corresponding pytest function
-4. Update this README
-
-Example:
-```python
-def test_new_endpoint(self):
-    """Test description"""
-    try:
-        response = requests.get(f"{self.base_url}/new/endpoint")
-        passed = response.status_code == 200
-        self._log_test("GET /new/endpoint", passed, response)
-        return passed
-    except Exception as e:
-        self._log_test("GET /new/endpoint", False, error=e)
-        return False
-```
-
-## 📄 License
-
-MIT License - Same as VibeCheck project
+- Quick reference: [TESTING_QUICKREF.md](TESTING_QUICKREF.md)
+- OpenAPI specification: [openapi-mvp.yaml](../../openapi-mvp.yaml)
+- Backend documentation: [../README.md](../README.md)
+- Swagger UI (live): http://localhost:3000/docs
