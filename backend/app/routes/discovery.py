@@ -5,10 +5,10 @@ Discovery feed endpoint — GET /api/v1/discovery/feed
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from sqlalchemy import desc
+from sqlalchemy.orm import joinedload
 from app.database import get_db
 from app.models.post import Post
 from app.models.share import Share
-from app.models.user import User
 
 discovery_bp = Blueprint('discovery', __name__)
 
@@ -63,9 +63,10 @@ def get_discovery_feed():
             .all()
         )
 
-        # Fetch recent shares (exclude own shares)
+        # Fetch recent shares (exclude own shares), eager-load user to avoid N+1
         shares = (
             db.query(Share)
+            .options(joinedload(Share.user))
             .filter(Share.user_id != current_user_id)
             .order_by(desc(Share.created_at))
             .limit(limit)
@@ -83,12 +84,11 @@ def get_discovery_feed():
         for share in shares:
             item = share.to_dict()
             item['type'] = 'share'
-            # Enrich share with user info
-            user = db.query(User).filter_by(user_id=share.user_id).first()
-            if user:
-                item['username'] = user.username
-                item['userAvatar'] = user.avatar
-                item['socialMediaLinks'] = user.social_media_links or []
+            # Enrich share with user info from the eager-loaded relationship
+            if share.user:
+                item['username'] = share.user.username
+                item['userAvatar'] = share.user.avatar
+                item['socialMediaLinks'] = share.user.social_media_links or []
             feed_items.append((share.created_at, item))
 
         # Sort by timestamp descending and limit
