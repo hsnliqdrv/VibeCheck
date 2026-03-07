@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
-import { useSearchParams, Link } from "react-router-dom";
+import { useEffect, useState, useRef } from "react";
+import { useSearchParams } from "react-router-dom";
 import { verifyEmail } from "./services/api";
 
 export default function VerifyEmail() {
   const [searchParams] = useSearchParams();
   const [status, setStatus] = useState({ loading: true, error: "", success: "" });
+  const hasVerified = useRef(false);
 
   useEffect(() => {
     const token = searchParams.get("token");
@@ -13,9 +14,14 @@ export default function VerifyEmail() {
       return;
     }
 
+    // Prevent double-execution in React StrictMode
+    if (hasVerified.current) return;
+    hasVerified.current = true;
+
     (async () => {
       try {
         const response = await verifyEmail(token);
+        
         // If the backend returns a JWT on verify, store it
         if (response?.token && response?.user) {
           localStorage.setItem("token", response.token);
@@ -49,12 +55,11 @@ export default function VerifyEmail() {
         {status.loading && <p className="auth-subtitle">Verifying your email...</p>}
         {status.error && <div className="auth-message error">{status.error}</div>}
         {status.success && (
-          <>
-            <div className="auth-message success">{status.success}</div>
-            <p className="auth-footer-text">
-              <Link to="/">Go to Login</Link>
-            </p>
-          </>
+          <div className="auth-message success">
+            {status.success}
+            <br />
+            <small>You are now logged in. You can close this page.</small>
+          </div>
         )}
       </div>
     </div>
