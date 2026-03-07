@@ -541,6 +541,159 @@
   cursor: not-allowed;
 }
 
+.rooms-upload-card {
+  margin-top: 0.35rem;
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.95), rgba(236, 240, 252, 0.95));
+  border: 1px solid #d7e0f2;
+  border-radius: 14px;
+  padding: 0.95rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.rooms-upload-card-header {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+}
+
+.rooms-upload-card-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.rooms-upload-card-title {
+  margin: 0;
+  color: #1f2433;
+  font-weight: 700;
+  font-size: 0.98rem;
+}
+
+.rooms-upload-card-subtitle {
+  margin: 0.2rem 0 0;
+  color: #4b5568;
+  font-size: 0.84rem;
+  line-height: 1.35;
+}
+
+.rooms-upload-input-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.rooms-upload-dropzone {
+  border: 1.5px dashed #8ea0cb;
+  border-radius: 12px;
+  background: #fff;
+  padding: 0.9rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  color: #334776;
+  font-weight: 600;
+  font-size: 0.92rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+}
+
+.rooms-upload-dropzone:hover {
+  border-color: #667eea;
+  transform: translateY(-1px);
+}
+
+.rooms-upload-dropzone.is-uploading {
+  cursor: progress;
+  opacity: 0.85;
+}
+
+.rooms-upload-meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.rooms-upload-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.6rem;
+  border-radius: 999px;
+  background: #edf2ff;
+  border: 1px solid #d7e2ff;
+  color: #425577;
+  font-size: 0.76rem;
+  font-weight: 600;
+}
+
+.rooms-upload-chip--success {
+  background: #eaf8ef;
+  color: #1f7a3f;
+  border-color: #bee8cb;
+}
+
+.rooms-post-upload-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+.rooms-post-upload-preview img {
+  width: 100%;
+  max-height: 220px;
+  object-fit: cover;
+  border-radius: 10px;
+  border: 1px solid #d6dfef;
+}
+
+.rooms-upload-clear-btn {
+  align-self: flex-start;
+  background: #f3f4f6;
+  border: 1px solid #d1d5db;
+  color: #4b5563;
+  border-radius: 999px;
+  padding: 0.35rem 0.8rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.rooms-upload-clear-btn:hover:not(:disabled) {
+  background: #e5e7eb;
+}
+
+.rooms-upload-clear-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.rooms-upload-url {
+  margin: 0.55rem 0 0;
+  font-size: 0.74rem;
+  color: #6b7280;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 0.55rem 0.65rem;
+  word-break: break-all;
+}
+
 .form-actions {
   display: flex;
   gap: 1rem;
@@ -849,6 +1002,15 @@
   .cancel-btn {
     width: 100%;
     justify-content: center;
+  }
+
+  .rooms-upload-card-header {
+    flex-direction: column;
+  }
+
+  .rooms-upload-dropzone {
+    justify-content: flex-start;
+    text-align: left;
   }
 }
 

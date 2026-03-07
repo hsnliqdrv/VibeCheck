@@ -11,6 +11,9 @@ import {
   AlertCircle,
   Flame,
   Plus,
+  UploadCloud,
+  ImagePlus,
+  CheckCircle2,
   X,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -74,6 +77,7 @@ const Rooms = () => {
   const [postFormData, setPostFormData] = useState({ title: '', category: 'cinema', image: '' });
   const [postLoading, setPostLoading] = useState(false);
   const [postImageUploading, setPostImageUploading] = useState(false);
+  const [postLastFileName, setPostLastFileName] = useState('');
   const [openCommentsByPost, setOpenCommentsByPost] = useState({});
   const [commentsByPost, setCommentsByPost] = useState({});
   const [commentInputs, setCommentInputs] = useState({});
@@ -222,6 +226,8 @@ const Rooms = () => {
   const handlePostImageChange = async (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
+
+    setPostLastFileName(file.name || '');
 
     const extension = getFileExtension(file);
     if (!POST_ALLOWED_EXTENSIONS.includes(extension)) {
@@ -534,16 +540,68 @@ const Rooms = () => {
                       </div>
                       <div className="form-group">
                         <label htmlFor="image">Post Image</label>
-                        <input
-                          id="image"
-                          type="file"
-                          accept=".jpg,.jpeg,.png,.webp,.gif,image/jpeg,image/png,image/webp,image/gif"
-                          onChange={handlePostImageChange}
-                          disabled={postLoading || postImageUploading}
-                        />
-                        {postImageUploading && <p>Uploading image...</p>}
+                        <div className="rooms-upload-card rooms-upload-card--post">
+                          <div className="rooms-upload-card-header">
+                            <div className="rooms-upload-card-icon" aria-hidden="true">
+                              <ImagePlus size={20} />
+                            </div>
+                            <div>
+                              <p className="rooms-upload-card-title">Add a post visual</p>
+                              <p className="rooms-upload-card-subtitle">
+                                Upload a strong visual to increase engagement in this room.
+                              </p>
+                            </div>
+                          </div>
+
+                          <input
+                            id="image"
+                            type="file"
+                            accept=".jpg,.jpeg,.png,.webp,.gif,image/jpeg,image/png,image/webp,image/gif"
+                            onChange={handlePostImageChange}
+                            disabled={postLoading || postImageUploading}
+                            className="rooms-upload-input-hidden"
+                          />
+
+                          <label
+                            htmlFor="image"
+                            className={`rooms-upload-dropzone ${(postLoading || postImageUploading) ? 'is-uploading' : ''}`}
+                          >
+                            <UploadCloud size={18} />
+                            <span>
+                              {postImageUploading ? 'Uploading image...' : 'Choose image (JPG, PNG, WEBP, GIF)'}
+                            </span>
+                          </label>
+
+                          <div className="rooms-upload-meta-row">
+                            <span className="rooms-upload-chip">
+                              <ImagePlus size={14} />
+                              Recommended: landscape 16:9
+                            </span>
+                            {postFormData.image && !postImageUploading && (
+                              <span className="rooms-upload-chip rooms-upload-chip--success">
+                                <CheckCircle2 size={14} />
+                                {postLastFileName ? `Uploaded: ${postLastFileName}` : 'Image ready'}
+                              </span>
+                            )}
+                          </div>
+
+                          {postFormData.image && (
+                            <div className="rooms-post-upload-preview">
+                              <img src={postFormData.image} alt="Post upload preview" />
+                              <button
+                                type="button"
+                                className="rooms-upload-clear-btn"
+                                onClick={() => setPostFormData((prev) => ({ ...prev, image: '' }))}
+                                disabled={postLoading || postImageUploading}
+                              >
+                                Remove image
+                              </button>
+                            </div>
+                          )}
+                        </div>
+
                         {postFormData.image && (
-                          <p style={{ marginTop: '8px', wordBreak: 'break-all', fontSize: '12px', opacity: 0.8 }}>
+                          <p className="rooms-upload-url">
                             Uploaded: {postFormData.image}
                           </p>
                         )}

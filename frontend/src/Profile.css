@@ -122,6 +122,129 @@
   object-fit: cover;
 }
 
+.avatar-preview--edit {
+  height: 170px;
+  border: 1px solid #dbe4f3;
+}
+
+.profile-upload-card {
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.95), rgba(234, 242, 255, 0.9));
+  border: 1px solid #d9e5fb;
+  border-radius: 14px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.profile-upload-card-header {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+}
+
+.profile-upload-card-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, #5c7cfa, #3b5bdb);
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.profile-upload-card-title {
+  margin: 0;
+  color: #1f2a44;
+  font-weight: 700;
+  font-size: 0.98rem;
+}
+
+.profile-upload-card-subtitle {
+  margin: 0.2rem 0 0;
+  color: #4f5f7a;
+  font-size: 0.84rem;
+  line-height: 1.35;
+}
+
+.profile-upload-input-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.profile-upload-dropzone {
+  border: 1.5px dashed #8ca4d8;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 0.9rem;
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  justify-content: center;
+  color: #2f4a84;
+  cursor: pointer;
+  transition: all 0.22s ease;
+  font-weight: 600;
+  font-size: 0.92rem;
+  text-align: center;
+}
+
+.profile-upload-dropzone:hover {
+  border-color: #5577d6;
+  transform: translateY(-1px);
+  background: #fff;
+}
+
+.profile-upload-dropzone.is-uploading {
+  cursor: progress;
+  opacity: 0.85;
+}
+
+.profile-upload-meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.profile-upload-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.76rem;
+  color: #44557a;
+  background: #edf2ff;
+  border: 1px solid #d7e3ff;
+  font-weight: 600;
+}
+
+.profile-upload-chip--success {
+  background: #e9f9ee;
+  color: #1f7a3e;
+  border-color: #bfe8cb;
+}
+
+.profile-upload-url {
+  margin: 0;
+  padding: 0.6rem;
+  border-radius: 8px;
+  font-size: 0.74rem;
+  line-height: 1.35;
+  color: #55627c;
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid #dbe4f2;
+  word-break: break-all;
+}
+
 /* Tags Editor */
 .tags-editor {
   display: flex;
@@ -571,6 +694,15 @@
 
   .shares-grid {
     grid-template-columns: 1fr;
+  }
+
+  .profile-upload-card-header {
+    flex-direction: column;
+  }
+
+  .profile-upload-dropzone {
+    justify-content: flex-start;
+    text-align: left;
   }
 }
 

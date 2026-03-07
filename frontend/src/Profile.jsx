@@ -1,5 +1,14 @@
 import { useEffect, useState } from "react";
-import { Clapperboard, Music, Gamepad2, BookOpen, Plane } from "lucide-react";
+import {
+  Clapperboard,
+  Music,
+  Gamepad2,
+  BookOpen,
+  Plane,
+  UploadCloud,
+  ImageIcon,
+  CheckCircle2,
+} from "lucide-react";
 import {
   getUserProfile,
   updateUserProfile,
@@ -48,6 +57,7 @@ export default function Profile() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [avatarUploading, setAvatarUploading] = useState(false);
+  const [avatarLastFileName, setAvatarLastFileName] = useState("");
   const [avatarCacheBuster, setAvatarCacheBuster] = useState(null);
 
   const [editingProfile, setEditingProfile] = useState(false);
@@ -229,6 +239,8 @@ export default function Profile() {
     const file = event.target.files?.[0];
     if (!file) return;
 
+    setAvatarLastFileName(file.name || "");
+
     const extension = getFileExtension(file);
     if (!AVATAR_ALLOWED_EXTENSIONS.includes(extension)) {
       setError("Invalid avatar format. Use jpg, jpeg, png, or webp.");
@@ -312,21 +324,63 @@ export default function Profile() {
             <div className="profile-field">
               <label>Avatar</label>
               {editingProfile ? (
-                <>
+                <div className="profile-upload-card">
+                  <div className="profile-upload-card-header">
+                    <div className="profile-upload-card-icon" aria-hidden="true">
+                      <UploadCloud size={20} />
+                    </div>
+                    <div>
+                      <p className="profile-upload-card-title">Update your avatar</p>
+                      <p className="profile-upload-card-subtitle">
+                        Use a clear profile photo. Supported formats: JPG, PNG, WEBP.
+                      </p>
+                    </div>
+                  </div>
+
                   <input
+                    id="avatar-upload-input"
                     type="file"
                     accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
                     onChange={handleAvatarFileChange}
-                    className="text-input"
+                    className="profile-upload-input-hidden"
                     disabled={avatarUploading}
                   />
-                  {avatarUploading && <p className="field-value">Uploading avatar...</p>}
+
+                  <label
+                    htmlFor="avatar-upload-input"
+                    className={`profile-upload-dropzone ${avatarUploading ? "is-uploading" : ""}`}
+                  >
+                    <UploadCloud size={18} />
+                    <span>
+                      {avatarUploading ? "Uploading avatar..." : "Click to choose a new avatar"}
+                    </span>
+                  </label>
+
+                  <div className="profile-upload-meta-row">
+                    <span className="profile-upload-chip">
+                      <ImageIcon size={14} />
+                      Best ratio: 1:1 square image
+                    </span>
+                    {profileForm.avatar && !avatarUploading && (
+                      <span className="profile-upload-chip profile-upload-chip--success">
+                        <CheckCircle2 size={14} />
+                        {avatarLastFileName ? `Uploaded: ${avatarLastFileName}` : "Avatar ready"}
+                      </span>
+                    )}
+                  </div>
+
                   {profileForm.avatar && (
-                    <p className="field-value" style={{ wordBreak: "break-all" }}>
-                      {profileForm.avatar}
-                    </p>
+                    <>
+                      <div className="avatar-preview avatar-preview--edit">
+                        <img
+                          src={getAvatarUrl(profileForm.avatar, avatarCacheBuster || userProfile?.updatedAt)}
+                          alt="Avatar preview"
+                        />
+                      </div>
+                      <p className="profile-upload-url">{profileForm.avatar}</p>
+                    </>
                   )}
-                </>
+                </div>
               ) : profileForm.avatar ? (
                 <div className="avatar-preview">
                   <img
