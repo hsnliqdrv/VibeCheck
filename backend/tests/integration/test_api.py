@@ -17,6 +17,13 @@ from typing import Dict, Optional
 import random
 import string
 
+def _verify_email(email: str):
+    import os
+    from sqlalchemy import create_engine, text
+    db_url = os.getenv("DATABASE_URL") or os.getenv("DB_URL") or "postgresql://postgres:postgres@localhost:5433/vibecheck"
+    engine = create_engine(db_url)
+    with engine.begin() as conn:
+        conn.execute(text("UPDATE users SET email_verified = true WHERE email = :email"), {"email": email})
 
 class VibeCheckAPITester:
     """Comprehensive API tester for VibeCheck backend"""
@@ -66,7 +73,7 @@ class VibeCheckAPITester:
     # ─────────────────────────────────────────────────────────
     
     def test_register(self):
-        """Test user registration"""
+        """Test user registration — should NOT issue JWT, should require email verification"""
         try:
             username = f"testuser_{self._random_string()}"
             email = f"{username}@test.com"
@@ -84,9 +91,12 @@ class VibeCheckAPITester:
                 data = response.json()
                 if 'user' in data:
                     self.user_id = data['user'].get('userId')
-                # Some implementations return token on registration
-                if 'token' in data:
-                    self.token = data['token']
+                # Registration must NOT issue a JWT token
+                passed = passed and ('token' not in data)
+                # Must signal that email verification is required
+                passed = passed and (data.get('emailVerificationRequired') is True)
+                # User should be marked as unverified
+                passed = passed and (data.get('user', {}).get('emailVerified') is False)
             
             self._log_test("POST /auth/register", passed, response)
             return passed
@@ -130,6 +140,7 @@ class VibeCheckAPITester:
                 "password": password
             }
             requests.post(f"{self.base_url}/auth/register", json=register_payload)
+            _verify_email(email)
             
             # Now login
             login_payload = {
@@ -1274,7 +1285,7 @@ class VibeCheckAPITester:
     # ─────────────────────────────────────────────────────────
     
     def test_user_response_schema(self):
-        """Validate user response has required fields"""
+        """Validate user response has required fields including new contract fields"""
         if not self.token:
             self._log_test("User Response Schema", False, error="No auth token available")
             return False
@@ -1286,9 +1297,12 @@ class VibeCheckAPITester:
             
             if passed:
                 data = response.json()
-                # Check required fields
-                required_fields = ['userId', 'email', 'username']
+                # Check required fields including new contract fields
+                required_fields = ['userId', 'email', 'username', 'emailVerified', 'socialMediaLinks']
                 passed = all(field in data for field in required_fields)
+                # socialMediaLinks must be a list
+                if passed:
+                    passed = isinstance(data['socialMediaLinks'], list)
             
             self._log_test("User Response Schema", passed, response)
             return passed
@@ -1327,7 +1341,7 @@ class VibeCheckAPITester:
             return False
     
     def test_aura_response_schema(self):
-        """Validate aura profile response structure"""
+        """Validate aura profile response structure including socialMediaLinks"""
         if not self.token:
             self._log_test("Aura Response Schema", False, error="No auth token available")
             return False
@@ -1339,9 +1353,11 @@ class VibeCheckAPITester:
             
             if passed:
                 data = response.json()
-                # Check required fields
-                required_fields = ['userId', 'username', 'auraColors', 'aestheticTags', 'topCategories']
+                # Check required fields including socialMediaLinks
+                required_fields = ['userId', 'username', 'auraColors', 'aestheticTags', 'topCategories', 'socialMediaLinks']
                 passed = all(field in data for field in required_fields)
+                if passed:
+                    passed = isinstance(data['socialMediaLinks'], list)
             
             self._log_test("Aura Response Schema", passed, response)
             return passed
@@ -1719,6 +1735,9 @@ class VibeCheckAPITester:
                 "password": "Test123456!"
             }
             reg_response = requests.post(f"{self.base_url}/auth/register", json=register_payload)
+            
+            # Verify email manually to bypass email workflow
+            _verify_email(email2)
             
             # Login as second user
             login_payload = {"email": email2, "password": "Test123456!"}
@@ -2554,6 +2573,8 @@ class VibeCheckAPITester:
 # ─────────────────────────────────────────────────────────
 
 import pytest
+
+pytestmark = pytest.mark.integration
 
 @pytest.fixture(scope="session")
 def tester() -> VibeCheckAPITester:

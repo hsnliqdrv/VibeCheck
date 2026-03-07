@@ -17,6 +17,10 @@ class Config:
     FLASK_ENV = os.getenv('FLASK_ENV', 'development')
     DEBUG = FLASK_ENV == 'development'
     
+    # Email (Resend)
+    RESEND_API_KEY = os.getenv('RESEND_API_KEY')
+    EMAIL_FROM_ADDRESS = os.getenv('EMAIL_FROM_ADDRESS', 'noreply@vibeaura.app')
+    FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:5173')
     # DigitalOcean Spaces
     DO_SPACES_NAME = os.getenv('DO_SPACES_NAME', 'vibecheck')
     DO_SPACES_REGION = os.getenv('DO_SPACES_REGION', 'sfo3')

@@ -14,6 +14,8 @@ import requests
 import random
 import string
 
+pytestmark = pytest.mark.integration
+
 BASE_URL = "http://localhost:3000/api/v1"
 
 
@@ -25,16 +27,29 @@ def _rand(n: int = 8) -> str:
     return "".join(random.choices(string.ascii_lowercase + string.digits, k=n))
 
 
+def _verify_email(email: str):
+    import os
+    from sqlalchemy import create_engine, text
+    db_url = os.getenv("DATABASE_URL") or os.getenv("DB_URL") or "postgresql://postgres:postgres@localhost:5433/vibecheck"
+    engine = create_engine(db_url)
+    with engine.begin() as conn:
+        conn.execute(text("UPDATE users SET email_verified = true WHERE email = :email"), {"email": email})
+
 def _register_and_login() -> tuple[str, str]:
     """Create a fresh user and return (token, user_id)."""
     suffix = _rand()
+    email = f"feat_{suffix}@test.com"
     r = requests.post(f"{BASE_URL}/auth/register", json={
-        "email": f"feat_{suffix}@test.com",
+        "email": email,
         "username": f"feat_{suffix}",
         "password": "Test123456!",
     })
     assert r.status_code == 201, f"Registration failed: {r.text}"
-    data = r.json()
+    _verify_email(email)
+
+    r_login = requests.post(f"{BASE_URL}/auth/login", json={"email": email, "password": "Test123456!"})
+    assert r_login.status_code == 200, f"Login failed: {r_login.text}"
+    data = r_login.json()
     token = data.get("token") or data.get("access_token") or data.get("accessToken")
     user_id = (data.get("userId")
                or data.get("user_id")

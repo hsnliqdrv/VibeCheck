@@ -96,7 +96,8 @@ def get_current_user_aura():
             'recentShares': [share.to_dict() for share in recent_shares],
             'auraColors': user.aura_colors or [],
             'aestheticTags': user.aesthetic_tags or [],
-            'topCategories': top_categories
+            'topCategories': top_categories,
+            'socialMediaLinks': user.social_media_links or []
         }
         
         return jsonify(aura_profile), 200
@@ -227,7 +228,8 @@ def update_aura_profile():
             'recentShares': [share.to_dict() for share in recent_shares],
             'auraColors': user.aura_colors or [],
             'aestheticTags': user.aesthetic_tags or [],
-            'topCategories': top_categories
+            'topCategories': top_categories,
+            'socialMediaLinks': user.social_media_links or []
         }
         
         return jsonify(aura_profile), 200
@@ -304,7 +306,8 @@ def get_user_aura(user_id):
             'recentShares': [share.to_dict() for share in recent_shares],
             'auraColors': user.aura_colors or [],
             'aestheticTags': user.aesthetic_tags or [],
-            'topCategories': top_categories
+            'topCategories': top_categories,
+            'socialMediaLinks': user.social_media_links or []
         }
         
         return jsonify(aura_profile), 200
@@ -759,7 +762,8 @@ def get_aura_matches():
                         'recentShares': [share.to_dict() for share in recent_shares],
                         'auraColors': user.aura_colors or [],
                         'aestheticTags': user.aesthetic_tags or [],
-                        'topCategories': top_categories_match
+                        'topCategories': top_categories_match,
+                        'socialMediaLinks': user.social_media_links or []
                     },
                     'similarityScore': similarity_score,
                     'sharedAesthetics': list(set(shared_aesthetics)),

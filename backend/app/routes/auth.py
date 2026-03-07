@@ -1,11 +1,13 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import create_access_token
 from sqlalchemy.exc import IntegrityError
 from email_validator import validate_email, EmailNotValidError
+from datetime import datetime
 import random
 import re
 from app.database import get_db
 from app.models.user import User
+from app.services.email_service import send_verification_email, send_password_reset_email
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -65,53 +67,14 @@ def login():
             token:
               type: string
               description: JWT access token
-              example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
             user:
               type: object
-              properties:
-                userId:
-                  type: string
-                  example: u_123abc456def
-                email:
-                  type: string
-                  example: user@example.com
-                username:
-                  type: string
-                  example: aesthetic_anna
-                avatar:
-                  type: string
-                  nullable: true
-                bio:
-                  type: string
-                  nullable: true
-                createdAt:
-                  type: string
-                  format: date-time
-                updatedAt:
-                  type: string
-                  format: date-time
       400:
         description: Bad request - missing or invalid fields
-        schema:
-          type: object
-          properties:
-            error:
-              type: string
-              example: Bad Request
-            message:
-              type: string
-              example: Email and password are required
       401:
         description: Invalid credentials
-        schema:
-          type: object
-          properties:
-            error:
-              type: string
-              example: Unauthorized
-            message:
-              type: string
-              example: Invalid email or password
+      403:
+        description: Email not verified
     """
     try:
         data = request.get_json()
@@ -152,6 +115,13 @@ def login():
                 'error': 'Unauthorized',
                 'message': 'Invalid email or password'
             }), 401
+        
+        # Check email verification
+        if not user.email_verified:
+            return jsonify({
+                'error': 'Forbidden',
+                'message': 'Email not verified. Please verify your email before logging in.'
+            }), 403
         
         # Create JWT token
         access_token = create_access_token(identity=user.user_id)
@@ -194,8 +164,7 @@ def register():
             password:
               type: string
               format: password
-              minLength: 1
-              example: password123
+              example: Password123
             username:
               type: string
               minLength: 3
@@ -203,60 +172,20 @@ def register():
               example: aesthetic_anna
     responses:
       201:
-        description: Registration successful
+        description: Registration successful. Verification email sent.
         schema:
           type: object
           properties:
-            token:
+            message:
               type: string
-              description: JWT access token
-              example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
             user:
               type: object
-              properties:
-                userId:
-                  type: string
-                  example: u_123abc456def
-                email:
-                  type: string
-                  example: user@example.com
-                username:
-                  type: string
-                  example: aesthetic_anna
-                avatar:
-                  type: string
-                  nullable: true
-                bio:
-                  type: string
-                  nullable: true
-                createdAt:
-                  type: string
-                  format: date-time
-                updatedAt:
-                  type: string
-                  format: date-time
+            emailVerificationRequired:
+              type: boolean
       400:
         description: Bad request - validation error
-        schema:
-          type: object
-          properties:
-            error:
-              type: string
-              example: Bad Request
-            message:
-              type: string
-              example: Username must be between 3 and 20 characters
       409:
         description: Email or username already exists
-        schema:
-          type: object
-          properties:
-            error:
-              type: string
-              example: Conflict
-            message:
-              type: string
-              example: Email already exists
     """
     db = None
     try:
@@ -326,13 +255,17 @@ def register():
         avatar_index = random.randint(1, 27)
         avatar_url = f"https://cdn.jsdelivr.net/gh/alohe/avatars/png/vibrent_{avatar_index}.png"
 
-        # Create new user
+        # Create new user (unverified)
         new_user = User(
             email=email,
             username=username,
-            avatar=avatar_url
+            avatar=avatar_url,
+            email_verified=False
         )
         new_user.set_password(password)
+        
+        # Generate email verification token
+        raw_token = new_user.generate_verification_token()
         
         try:
             db.add(new_user)
@@ -345,13 +278,302 @@ def register():
                 'message': 'Email or username already exists'
             }), 409
         
-        # Create JWT token
-        access_token = create_access_token(identity=new_user.user_id)
+        # Send verification email via Resend
+        try:
+            send_verification_email(email, username, raw_token)
+        except Exception as mail_err:
+            current_app.logger.error(f"Failed to send verification email to {email}: {mail_err}")
+        
+        # Do NOT issue JWT at registration — user must verify email first
+        return jsonify({
+            'message': 'Registration successful. Please check your email to verify your account.',
+            'user': new_user.to_dict(),
+            'emailVerificationRequired': True
+        }), 201
+    
+    except Exception as e:
+        if db is not None:
+            db.rollback()
+        return jsonify({
+            'error': 'Internal Server Error',
+            'message': str(e)
+        }), 500
+
+
+@auth_bp.route('/verify-email', methods=['GET'])
+def verify_email():
+    """
+    Verify user email
+    ---
+    tags:
+      - Auth
+    parameters:
+      - name: token
+        in: query
+        type: string
+        required: true
+        description: Email verification token
+    responses:
+      200:
+        description: Email verified successfully
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+            token:
+              type: string
+              description: JWT authentication token
+            user:
+              type: object
+      400:
+        description: Invalid or expired verification token
+      404:
+        description: Token not found
+    """
+    db = None
+    try:
+        raw_token = request.args.get('token')
+        
+        if not raw_token:
+            return jsonify({
+                'error': 'Bad Request',
+                'message': 'Verification token is required'
+            }), 400
+        
+        # Hash the incoming token to compare with stored hash
+        hashed_token = User.hash_token(raw_token)
+        
+        db = get_db()
+        
+        # Find user by hashed verification token
+        user = db.query(User).filter_by(verification_token=hashed_token).first()
+        
+        if not user:
+            return jsonify({
+                'error': 'Not Found',
+                'message': 'Invalid verification token'
+            }), 404
+        
+        # Check token expiry
+        if user.verification_token_expiry and user.verification_token_expiry < datetime.utcnow():
+            return jsonify({
+                'error': 'Bad Request',
+                'message': 'Verification token has expired'
+            }), 400
+        
+        # Mark email as verified and clear token
+        user.email_verified = True
+        user.verification_token = None
+        user.verification_token_expiry = None
+        
+        db.commit()
+        db.refresh(user)
+        
+        # Issue JWT now that email is verified
+        access_token = create_access_token(identity=user.user_id)
         
         return jsonify({
+            'message': 'Email verified successfully.',
             'token': access_token,
-            'user': new_user.to_dict()
-        }), 201
+            'user': user.to_dict()
+        }), 200
+    
+    except Exception as e:
+        if db is not None:
+            db.rollback()
+        return jsonify({
+            'error': 'Internal Server Error',
+            'message': str(e)
+        }), 500
+
+
+@auth_bp.route('/forgot-password', methods=['POST'])
+def forgot_password():
+    """
+    Request password reset
+    ---
+    tags:
+      - Auth
+    parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          required:
+            - email
+          properties:
+            email:
+              type: string
+              format: email
+              example: user@example.com
+    responses:
+      200:
+        description: Password reset email sent (always returns 200 for security)
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+      400:
+        description: Bad request
+    """
+    db = None
+    try:
+        data = request.get_json()
+        
+        if not data:
+            return jsonify({
+                'error': 'Bad Request',
+                'message': 'Request body is required'
+            }), 400
+        
+        email = data.get('email')
+        
+        if not email:
+            return jsonify({
+                'error': 'Bad Request',
+                'message': 'Email is required'
+            }), 400
+        
+        # Validate email format
+        try:
+            validate_email(email, check_deliverability=False)
+        except EmailNotValidError:
+            return jsonify({
+                'error': 'Bad Request',
+                'message': 'Invalid email format'
+            }), 400
+        
+        db = get_db()
+        
+        # Always return success message for security (don't leak user existence)
+        success_message = 'If an account exists with this email, a password reset link has been sent.'
+        
+        user = db.query(User).filter_by(email=email).first()
+        
+        if user and user.email_verified:
+            raw_token = user.generate_reset_token()
+            db.commit()
+            
+            try:
+                send_password_reset_email(email, user.username, raw_token)
+            except Exception as mail_err:
+                current_app.logger.error(f"Failed to send password reset email to {email}: {mail_err}")
+        
+        return jsonify({
+            'message': success_message
+        }), 200
+    
+    except Exception as e:
+        if db is not None:
+            db.rollback()
+        return jsonify({
+            'error': 'Internal Server Error',
+            'message': str(e)
+        }), 500
+
+
+@auth_bp.route('/reset-password', methods=['POST'])
+def reset_password():
+    """
+    Reset user password
+    ---
+    tags:
+      - Auth
+    parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          required:
+            - token
+            - newPassword
+          properties:
+            token:
+              type: string
+              description: Password reset token
+            newPassword:
+              type: string
+              format: password
+              description: New password
+    responses:
+      200:
+        description: Password reset successfully
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+      400:
+        description: Invalid or expired reset token
+      404:
+        description: Token not found
+    """
+    db = None
+    try:
+        data = request.get_json()
+        
+        if not data:
+            return jsonify({
+                'error': 'Bad Request',
+                'message': 'Request body is required'
+            }), 400
+        
+        raw_token = data.get('token')
+        new_password = data.get('newPassword')
+        
+        if not raw_token or not new_password:
+            return jsonify({
+                'error': 'Bad Request',
+                'message': 'Token and new password are required'
+            }), 400
+        
+        # Validate new password strength
+        is_valid, message = validate_password_strength(new_password)
+        if not is_valid:
+            return jsonify({
+                'error': 'Bad Request',
+                'message': message
+            }), 400
+        
+        # Hash the incoming token to compare with stored hash
+        hashed_token = User.hash_token(raw_token)
+        
+        db = get_db()
+        
+        # Find user by hashed reset token that hasn't been used
+        user = db.query(User).filter_by(
+            reset_token=hashed_token,
+            reset_token_used=False
+        ).first()
+        
+        if not user:
+            return jsonify({
+                'error': 'Bad Request',
+                'message': 'Invalid or expired reset token'
+            }), 400
+        
+        # Check token expiry
+        if user.reset_token_expiry and user.reset_token_expiry < datetime.utcnow():
+            return jsonify({
+                'error': 'Bad Request',
+                'message': 'Reset token has expired'
+            }), 400
+        
+        # Update password and invalidate token
+        user.set_password(new_password)
+        user.reset_token_used = True
+        user.reset_token = None
+        user.reset_token_expiry = None
+        
+        db.commit()
+        
+        return jsonify({
+            'message': 'Password has been reset successfully.'
+        }), 200
     
     except Exception as e:
         if db is not None:

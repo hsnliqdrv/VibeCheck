@@ -96,53 +96,10 @@ echo "🧪 Running tests..."
 echo "===================="
 echo ""
 
-# Ask user which tests to run
-echo "Select test type:"
-echo "1) Smoke test (quick - 5 seconds)"
-echo "2) Full test suite (comprehensive)"
-echo "3) Pytest with HTML report"
-echo "4) All of the above"
+echo "Running Unified Test Suite (pytest) with HTML report..."
+$PYTHON_CMD -m pytest backend/tests -v --html=backend/tests/test_report.html --self-contained-html
 echo ""
-read -p "Enter choice (1-4): " CHOICE
-
-case $CHOICE in
-    1)
-        echo ""
-        echo "Running smoke test..."
-        $PYTHON_CMD backend/tests/smoke_test.py
-        ;;
-    2)
-        echo ""
-        echo "Running full test suite..."
-        $PYTHON_CMD backend/tests/test_api.py
-        ;;
-    3)
-        echo ""
-        echo "Running pytest with HTML report..."
-        $PYTHON_CMD -m pytest backend/tests/test_api.py -v --html=backend/tests/test_report.html --self-contained-html
-        echo ""
-        echo -e "${GREEN}✓ Report saved to: backend/tests/test_report.html${NC}"
-        ;;
-    4)
-        echo ""
-        echo "=== 1. Smoke Test ==="
-        $PYTHON_CMD backend/tests/smoke_test.py
-        
-        echo ""
-        echo "=== 2. Full Test Suite ==="
-        $PYTHON_CMD backend/tests/test_api.py
-        
-        echo ""
-        echo "=== 3. Pytest with HTML Report ==="
-        $PYTHON_CMD -m pytest backend/tests/test_api.py -v --html=backend/tests/test_report.html --self-contained-html
-        echo ""
-        echo -e "${GREEN}✓ Report saved to: backend/tests/test_report.html${NC}"
-        ;;
-    *)
-        echo -e "${RED}Invalid choice${NC}"
-        exit 1
-        ;;
-esac
+echo -e "${GREEN}✓ Report saved to: backend/tests/test_report.html${NC}"
 
 echo ""
 echo "===================="

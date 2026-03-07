@@ -1,33 +1,36 @@
 # VibeCheck Backend
 
-Python backend for VibeCheck MVP - Authentication endpoints.
+Python backend for the VibeCheck social platform — content curation, aura profiles, social discovery, gamification, and more.
 
 ## Tech Stack
 
 - **Flask** - Web framework
+- **Flasgger** - Auto-generated Swagger docs
 - **SQLAlchemy** - ORM
-- **PostgreSQL** - Database
-- **JWT** - Authentication
+- **PostgreSQL** - Database (Docker) / SQLite (local dev)
+- **JWT** (Flask-JWT-Extended) - Authentication
 - **bcrypt** - Password hashing
+- **httpx** - Async HTTP client for external APIs
+- **python-dotenv** - Environment variable loading
 
 ## Setup
 
 ### Option 1: Docker (Recommended)
 
 1. **Configure environment**
-   ```powershell
+   ```bash
    cp .env.example .env
-   # Edit .env if needed (optional for Docker)
+   # Edit .env if needed (optional for Docker — defaults work out of the box)
    ```
 
 2. **Start all services**
-   ```powershell
-   docker-compose up -d
+   ```bash
+   docker compose up -d --build
    ```
 
 3. **Check services are running**
-   ```powershell
-   docker-compose ps
+   ```bash
+   docker compose ps
    ```
 
    The API will be available at `http://localhost:3000`
@@ -35,29 +38,31 @@ Python backend for VibeCheck MVP - Authentication endpoints.
 ### Option 2: Local Development
 
 1. **Create virtual environment**
-   ```powershell
+   ```bash
    python -m venv venv
-   .venv\Scripts\Activate.ps1
+   source venv/bin/activate   # macOS/Linux
+   # .venv\Scripts\activate   # Windows
    ```
 
 2. **Install dependencies**
-   ```powershell
+   ```bash
    pip install -r requirements.txt
    ```
 
 3. **Configure environment**
-   ```powershell
+   ```bash
    cp .env.example .env
    # Edit .env with your database credentials
    ```
+   `python-dotenv` is installed, so the app automatically loads `.env`.
 
 4. **Start PostgreSQL in Docker**
-   ```powershell
-   docker-compose up -d postgres
+   ```bash
+   docker compose up -d db
    ```
 
 5. **Run the application locally**
-   ```powershell
+   ```bash
    python main.py
    ```
 
@@ -77,81 +82,67 @@ This allows you to:
 2. Compare the generated docs with [openapi-mvp.yaml](../openapi-mvp.yaml) to verify they match
 3. Test endpoints interactively in your browser
 
-### Authentication
+### Endpoint Summary
 
-#### POST /api/v1/auth/register
-Register a new user.
+| Group | Prefix | Endpoints |
+|-------|--------|----------|
+| **Auth** | `/api/v1/auth` | `POST /register`, `POST /login` |
+| **Users** | `/api/v1/users` | `GET /profile`, `PUT /profile`, `GET /{userId}` |
+| **Content** | `/api/v1/content` | `GET /{category}`, `GET /{category}/{id}` — movies, albums, games, books, locations |
+| **Search** | `/api/v1/search` | `GET /` with `query` and `categories` params |
+| **Aura** | `/api/v1/aura` | `GET/PUT /profile`, `GET /profile/{userId}`, `GET/POST /shares` |
+| **Social** | `/api/v1/social` | Rooms CRUD, join/leave, posts, trending |
+| **Discovery** | `/api/v1/discovery` | `GET /feed` |
+| **Gamification** | `/api/v1/` | Badges, curator levels, XP, streaks |
+| **Health** | `/api/v1/health` | `GET /` |
 
-**Request:**
-```json
-{
-  "email": "user@example.com",
-  "password": "password123",
-  "username": "aesthetic_anna"
-}
-```
-
-**Response (201):**
-```json
-{
-  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "user": {
-    "userId": "u_123abc456def",
-    "email": "user@example.com",
-    "username": "aesthetic_anna",
-    "avatar": null,
-    "bio": null,
-    "createdAt": "2026-02-11T12:00:00",
-    "updatedAt": "2026-02-11T12:00:00"
-  }
-}
-```
-
-#### POST /api/v1/auth/login
-Login with existing credentials.
-
-**Request:**
-```json
-{
-  "email": "user@example.com",
-  "password": "password123"
-}
-```
-
-**Response (200):**
-```json
-{
-  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "user": {
-    "userId": "u_123abc456def",
-    "email": "user@example.com",
-    "username": "aesthetic_anna",
-    "avatar": null,
-    "bio": null,
-    "createdAt": "2026-02-11T12:00:00",
-    "updatedAt": "2026-02-11T12:00:00"
-  }
-}
-```
+For full request/response details, see the **Swagger UI** at http://localhost:3000/docs
 
 ## Project Structure
 
 ```
 backend/
+├── main.py                        # Entry point (loads .env, creates app)
+├── requirements.txt               # Python dependencies
+├── Dockerfile                     # Container build
+├── docker-compose.yml             # Backend + PostgreSQL services
+├── .env.example                   # Environment variable template
 ├── app/
-│   ├── __init__.py           # Flask app factory
-│   ├── config.py             # Configuration
-│   ├── database.py           # Database setup
+│   ├── __init__.py                # Flask app factory + blueprint registration
+│   ├── config.py                  # Configuration from env vars
+│   ├── database.py                # SQLAlchemy engine & session setup
+│   ├── seed_rooms.py              # Seed aesthetic rooms
+│   ├── seed_gamification.py       # Seed badges & levels
 │   ├── models/
-│   │   ├── __init__.py
-│   │   └── user.py           # User model
-│   └── routes/
-│       ├── __init__.py
-│       └── auth.py           # Auth endpoints
-├── main.py                   # Application entry point
-├── requirements.txt          # Python dependencies
-├── .env.example             # Environment template
-└── README.md                # This file
+│   │   ├── user.py                # User model
+│   │   ├── content.py             # Content / curation models
+│   │   ├── room.py                # Aesthetic room model
+│   │   ├── post.py                # Room post model
+│   │   ├── share.py               # Aura share model
+│   │   ├── badge.py               # Badge model
+│   │   └── gamification.py        # Levels, XP, streaks
+│   ├── routes/
+│   │   ├── auth.py                # /auth — register, login
+│   │   ├── user_profile.py        # /users — profile CRUD
+│   │   ├── content.py             # /content — movies, albums, games, books, locations
+│   │   ├── search.py              # /search — global search
+│   │   ├── aura.py                # /aura — aura profile & shares
+│   │   ├── social.py              # /social — rooms, posts
+│   │   ├── discovery.py           # /discovery — feed
+│   │   ├── gamification.py        # badges, levels, XP
+│   │   └── badges.py              # (unused, replaced by gamification)
+│   └── services/
+│       ├── aura_inference.py       # Auto-generate aesthetic tags & colors
+│       ├── badge_service.py        # Badge award logic
+│       └── external_apis/          # Third-party API clients
+│           ├── movies.py           # TMDB
+│           ├── albums.py           # MusicBrainz / Spotify
+│           ├── games.py            # RAWG
+│           ├── books.py            # Open Library
+│           └── locations.py        # Location / weather APIs
+└── tests/                         # See tests/TEST_README.md
+    ├── unit/                      # Fast tests (SQLite, no Docker)
+    └── integration/               # Full API tests (PostgreSQL + Docker)
 ```
 
 ## Database Schema
@@ -172,71 +163,73 @@ The application automatically creates database tables on startup using SQLAlchem
 
 ## Environment Variables
 
-See `.env.example` for required environment variables:
-- `DATABASE_URL` - PostgreSQL connection string (for local Python app)
-- `JWT_SECRET_KEY` - Secret key for JWT tokens (change in production!)
-- `FLASK_ENV` - Environment (development/production)
-- `PORT` - Server port (default: 3000)
-- `POSTGRES_DB` - PostgreSQL database name (Docker only)
-- `POSTGRES_USER` - PostgreSQL username (Docker only)
-- `POSTGRES_PASSWORD` - PostgreSQL password (Docker only, change in production!)
+See `.env.example` for all variables:
 
-**Note:** Docker Compose uses the same `.env` file for PostgreSQL credentials. Defaults are set for development convenience.
+| Variable | Purpose | Required |
+|----------|---------|----------|
+| `DATABASE_URL` | PostgreSQL connection string | Yes (local dev) |
+| `JWT_SECRET_KEY` | Secret for JWT tokens | Yes |
+| `FLASK_ENV` | `development` or `production` | No (defaults to dev) |
+| `PORT` | Server port | No (defaults to 3000) |
+| `TMDB_API_KEY` | The Movie Database API key | Yes (for movies) |
+| `RAWG_API_KEY` | RAWG video games API key | Yes (for games) |
+| `UNSPLASH_ACCESS_KEY` | Unsplash API key | Yes (for locations) |
+| `POSTGRES_DB` | PostgreSQL database name | Docker only |
+| `POSTGRES_USER` | PostgreSQL username | Docker only |
+| `POSTGRES_PASSWORD` | PostgreSQL password | Docker only |
+
+**Note:** Docker Compose uses the same `.env` file. `python-dotenv` loads it automatically for local runs too.
 
 ## Docker Commands
 
-```powershell
+```bash
 # Start all services (backend + database)
-docker-compose up -d
+docker compose up -d
 
 # Start only database
-docker-compose up -d postgres
+docker compose up -d db
 
 # View logs
-docker-compose logs -f
+docker compose logs -f
 
 # View backend logs only
-docker-compose logs -f backend
+docker compose logs -f backend
 
 # Rebuild after code changes
-docker-compose up -d --build
+docker compose up -d --build
 
 # Stop all services
-docker-compose down
+docker compose down
 
 # Stop and remove data (⚠️ destroys all data)
-docker-compose down -v
+docker compose down -v
 
 # Access PostgreSQL shell
-docker-compose exec postgres psql -U postgres -d vibecheck
+docker compose exec db psql -U postgres -d vibecheck
 ```
 
 ## Testing
 
-Comprehensive API tests are available in the `tests/` folder.
+Comprehensive test suite with **270+ test cases** split into unit and integration tests.
 
 ### Quick Start
 
-```powershell
+```bash
 # Install test dependencies
 pip install -r tests/test_requirements.txt
 
-# Run quick smoke test
-python tests/smoke_test.py
+# Run unit tests (fast, no Docker needed)
+pytest tests/unit/
 
-# Run full test suite
-python tests/test_api.py
+# Run integration tests (requires Docker + PostgreSQL)
+docker compose up -d db
+pytest tests/integration/
 
-# Run with pytest
-pytest tests/ -v
+# Run everything
+pytest tests/
 ```
 
 ### Test Documentation
 
-- **[tests/TESTING_QUICKREF.md](tests/TESTING_QUICKREF.md)** - Quick reference
-- **[tests/TEST_README.md](tests/TEST_README.md)** - Complete guide
-- **[README_TESTS.md](README_TESTS.md)** - Testing overview
-
-See the [testing documentation](README_TESTS.md) for more details.
-
-```
+- **[tests/TESTING_QUICKREF.md](tests/TESTING_QUICKREF.md)** — Quick reference
+- **[tests/TEST_README.md](tests/TEST_README.md)** — Complete guide

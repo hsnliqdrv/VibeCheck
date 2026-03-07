@@ -21,6 +21,16 @@ class Badge(Base):
     # back-ref populated by UserBadge
     user_badges = relationship('UserBadge', back_populates='badge')
 
+    @staticmethod
+    def _format_unlocked_date(dt):
+        """Format unlocked date in a cross-platform way (no %-d / %-I)."""
+        if dt is None:
+            return None
+        day = dt.day
+        hour_12 = dt.hour % 12 or 12
+        am_pm = 'AM' if dt.hour < 12 else 'PM'
+        return f"{dt.strftime('%B')} {day}, {dt.strftime('%Y')} at {hour_12}:{dt.strftime('%M')} {am_pm}"
+
     def to_dict(self, unlocked: bool = False, unlocked_date=None, progress: int = 0):
         return {
             'id': self.id,
@@ -31,7 +41,7 @@ class Badge(Base):
             'category': self.category,
             'maxProgress': self.max_progress,
             'unlocked': unlocked,
-            'unlockedDate': unlocked_date.isoformat() if unlocked_date else None,
+            'unlockedDate': self._format_unlocked_date(unlocked_date),
             'progress': progress,
         }
 

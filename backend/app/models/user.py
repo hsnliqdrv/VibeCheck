@@ -1,7 +1,9 @@
-from datetime import datetime
-from sqlalchemy import Column, String, DateTime, Text
+from datetime import datetime, timedelta
+from sqlalchemy import Column, String, DateTime, Text, Boolean
 from sqlalchemy.dialects.postgresql import UUID, JSON
 import uuid
+import hashlib
+import secrets
 import bcrypt
 from app.database import Base
 
@@ -16,6 +18,19 @@ class User(Base):
     password_hash = Column(String(255), nullable=False)
     avatar = Column(Text, nullable=True)
     bio = Column(String(500), nullable=True)
+    
+    # Email verification
+    email_verified = Column(Boolean, default=False, nullable=False)
+    verification_token = Column(String(255), nullable=True)  # hashed token
+    verification_token_expiry = Column(DateTime, nullable=True)
+    
+    # Password reset
+    reset_token = Column(String(255), nullable=True)  # hashed token
+    reset_token_expiry = Column(DateTime, nullable=True)
+    reset_token_used = Column(Boolean, default=False, nullable=False)
+    
+    # Social media links
+    social_media_links = Column(JSON, nullable=True)  # Array of {platform, url}
     
     # Aura profile fields
     aura_colors = Column(JSON, nullable=True)  # Array of hex color codes
@@ -38,6 +53,26 @@ class User(Base):
             self.password_hash.encode('utf-8')
         )
     
+    def generate_verification_token(self):
+        """Generate an email verification token. Returns the raw token (to send to user)."""
+        raw_token = secrets.token_urlsafe(32)
+        self.verification_token = hashlib.sha256(raw_token.encode()).hexdigest()
+        self.verification_token_expiry = datetime.utcnow() + timedelta(hours=24)
+        return raw_token
+    
+    def generate_reset_token(self):
+        """Generate a password reset token. Returns the raw token (to send to user)."""
+        raw_token = secrets.token_urlsafe(32)
+        self.reset_token = hashlib.sha256(raw_token.encode()).hexdigest()
+        self.reset_token_expiry = datetime.utcnow() + timedelta(hours=1)
+        self.reset_token_used = False
+        return raw_token
+    
+    @staticmethod
+    def hash_token(raw_token):
+        """Hash a raw token for comparison."""
+        return hashlib.sha256(raw_token.encode()).hexdigest()
+    
     def to_dict(self):
         """Convert user to dictionary (exclude password)"""
         return {
@@ -46,6 +81,8 @@ class User(Base):
             'username': self.username,
             'avatar': self.avatar,
             'bio': self.bio,
+            'emailVerified': self.email_verified,
+            'socialMediaLinks': self.social_media_links or [],
             'createdAt': self.created_at.isoformat(),
             'updatedAt': self.updated_at.isoformat()
         }
