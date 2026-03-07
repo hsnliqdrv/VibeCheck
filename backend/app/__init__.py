@@ -92,6 +92,7 @@ def create_app():
     from app.routes.search import search_bp
     from app.routes.social import social_bp
     from app.routes.discovery import discovery_bp
+    from app.routes.upload import upload_bp
     
     # from app.routes.badges import badges_bp, curator_bp
     from app.routes.gamification import gamification_bp
@@ -103,6 +104,7 @@ def create_app():
     app.register_blueprint(search_bp, url_prefix='/api/v1/search')
     app.register_blueprint(social_bp, url_prefix='/api/v1/social')
     app.register_blueprint(discovery_bp, url_prefix='/api/v1/discovery')
+    app.register_blueprint(upload_bp, url_prefix='/api/v1/upload')
     app.register_blueprint(gamification_bp, url_prefix='/api/v1')
     
     return app

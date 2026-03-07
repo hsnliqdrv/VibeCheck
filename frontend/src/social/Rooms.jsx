@@ -26,6 +26,8 @@ import {
   getPostComments,
   addComment,
   getUserById,
+  getPostUploadUrl,
+  uploadToPresignedUrl,
 } from '../services/api';
 import { getAvatarUrl } from '../utils/avatarUrl';
 import './Rooms.css';
@@ -50,6 +52,8 @@ const PLATFORM_LABELS = {
 };
 
 const Rooms = () => {
+  const POST_ALLOWED_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
+
   const normalizeCommentsResponse = (response) => {
     if (Array.isArray(response)) return response;
     if (Array.isArray(response?.comments)) return response.comments;
@@ -69,6 +73,7 @@ const Rooms = () => {
   const [showPostForm, setShowPostForm] = useState(false);
   const [postFormData, setPostFormData] = useState({ title: '', category: 'cinema', image: '' });
   const [postLoading, setPostLoading] = useState(false);
+  const [postImageUploading, setPostImageUploading] = useState(false);
   const [openCommentsByPost, setOpenCommentsByPost] = useState({});
   const [commentsByPost, setCommentsByPost] = useState({});
   const [commentInputs, setCommentInputs] = useState({});
@@ -179,6 +184,10 @@ const Rooms = () => {
   const handleCreatePost = async (e) => {
     e.preventDefault();
     if (!postFormData.title.trim()) return;
+    if (!postFormData.image.trim()) {
+      setError('Please upload an image for your post');
+      return;
+    }
 
     try {
       setPostLoading(true);
@@ -201,6 +210,49 @@ const Rooms = () => {
       console.error(err);
     } finally {
       setPostLoading(false);
+    }
+  };
+
+  const getFileExtension = (file) => {
+    const fileName = file?.name || '';
+    const extension = fileName.split('.').pop();
+    return extension ? extension.toLowerCase() : '';
+  };
+
+  const handlePostImageChange = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const extension = getFileExtension(file);
+    if (!POST_ALLOWED_EXTENSIONS.includes(extension)) {
+      setError('Invalid image format. Use jpg, jpeg, png, webp, or gif.');
+      event.target.value = '';
+      return;
+    }
+
+    try {
+      setPostImageUploading(true);
+      setError(null);
+
+      const uploadInfo = await getPostUploadUrl(extension);
+
+      if (uploadInfo.max_size_bytes && file.size > uploadInfo.max_size_bytes) {
+        throw new Error(
+          `Image is too large. Maximum size is ${Math.floor(uploadInfo.max_size_bytes / (1024 * 1024))} MB.`
+        );
+      }
+
+      await uploadToPresignedUrl(uploadInfo.presigned_url, file, file.type || 'image/jpeg');
+
+      setPostFormData((prev) => ({
+        ...prev,
+        image: uploadInfo.cdn_url,
+      }));
+    } catch (err) {
+      setError(err.response?.data?.error || err.response?.data?.message || err.message || 'Failed to upload image');
+    } finally {
+      setPostImageUploading(false);
+      event.target.value = '';
     }
   };
 
@@ -481,17 +533,20 @@ const Rooms = () => {
                         </select>
                       </div>
                       <div className="form-group">
-                        <label htmlFor="image">Image URL</label>
+                        <label htmlFor="image">Post Image</label>
                         <input
                           id="image"
-                          type="url"
-                          placeholder="https://example.com/your-image.jpg"
-                          value={postFormData.image}
-                          onChange={(e) =>
-                            setPostFormData({ ...postFormData, image: e.target.value })
-                          }
-                          disabled={postLoading}
+                          type="file"
+                          accept=".jpg,.jpeg,.png,.webp,.gif,image/jpeg,image/png,image/webp,image/gif"
+                          onChange={handlePostImageChange}
+                          disabled={postLoading || postImageUploading}
                         />
+                        {postImageUploading && <p>Uploading image...</p>}
+                        {postFormData.image && (
+                          <p style={{ marginTop: '8px', wordBreak: 'break-all', fontSize: '12px', opacity: 0.8 }}>
+                            Uploaded: {postFormData.image}
+                          </p>
+                        )}
                       </div>
                       <div className="form-actions">
                         <motion.button
@@ -499,7 +554,7 @@ const Rooms = () => {
                           whileTap={{ scale: 0.98 }}
                           type="submit"
                           className="submit-btn"
-                          disabled={postLoading}
+                          disabled={postLoading || postImageUploading}
                         >
                           {postLoading ? (
                             <>

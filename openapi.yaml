@@ -33,6 +33,8 @@ tags:
     description: Community posts, rooms, and discovery
   - name: Search
     description: Search and filtering operations
+  - name: Upload
+    description: Presigned upload URL generation for DigitalOcean Spaces
 
 paths:
   /auth/login:
@@ -1595,6 +1597,74 @@ paths:
         '401':
           $ref: '#/components/responses/UnauthorizedError'
 
+  /upload/avatar:
+    post:
+      tags:
+        - Upload
+      summary: Get presigned URL for avatar upload
+      operationId: getAvatarUploadUrl
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: file_extension
+          in: query
+          required: true
+          description: File extension for the avatar image
+          schema:
+            type: string
+            enum: [jpg, jpeg, png, webp]
+      responses:
+        '200':
+          description: Presigned URL generated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AvatarUploadResponse'
+        '400':
+          description: Invalid request or file extension
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UploadErrorResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /upload/post:
+    post:
+      tags:
+        - Upload
+      summary: Get presigned URL for post image upload
+      operationId: getPostUploadUrl
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: file_extension
+          in: query
+          required: true
+          description: File extension for the post image
+          schema:
+            type: string
+            enum: [jpg, jpeg, png, webp, gif]
+      responses:
+        '200':
+          description: Presigned URL generated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostUploadResponse'
+        '400':
+          description: Invalid request or file extension
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UploadErrorResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
 components:
   schemas:
     User:
@@ -1637,6 +1707,72 @@ components:
         updatedAt:
           type: string
           format: date-time
+
+    AvatarUploadResponse:
+      type: object
+      required:
+        - presigned_url
+        - file_key
+        - bucket
+        - cdn_url
+        - upload_method
+        - max_size_bytes
+        - allowed_types
+        - expires_in_seconds
+      properties:
+        presigned_url:
+          type: string
+          format: uri
+        file_key:
+          type: string
+          example: avatars/u_123/avatar.png
+        bucket:
+          type: string
+          example: vibecheck
+        cdn_url:
+          type: string
+          format: uri
+          example: https://cdn.vibeaura.app/avatars/u_123/avatar.png
+        upload_method:
+          type: string
+          example: PUT
+        max_size_bytes:
+          type: integer
+          example: 5242880
+        allowed_types:
+          type: array
+          items:
+            type: string
+          example: [image/jpeg, image/png, image/webp]
+        expires_in_seconds:
+          type: integer
+          example: 3600
+
+    PostUploadResponse:
+      allOf:
+        - $ref: '#/components/schemas/AvatarUploadResponse'
+        - type: object
+          required:
+            - post_id
+          properties:
+            post_id:
+              type: string
+              description: Generated post ID associated with uploaded image key
+              example: 550e8400-e29b-41d4-a716-446655440000
+
+    UploadErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+        details:
+          type: string
+        allowed:
+          type: array
+          items:
+            type: string
+        max_size_mb:
+          type: integer
 
     Movie:
       type: object

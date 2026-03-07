@@ -6,6 +6,7 @@ import { register as registerUser } from "./services/api";
 export default function Register() {
   const { register, handleSubmit } = useForm();
   const [status, setStatus] = useState({ loading: false, error: "", success: "" });
+  const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -62,12 +63,54 @@ export default function Register() {
           </label>
           <label className="auth-label">
             Password
-            <input
-              {...register("password")}
-              type="password"
-              placeholder="Create a strong password"
-              required
-            />
+            <div style={{ position: 'relative', width: '100%' }}>
+              <input
+                {...register("password")}
+                type={showPassword ? "text" : "password"}
+                placeholder="Create a strong password"
+                required
+                style={{ width: '100%', paddingRight: '50px', boxSizing: 'border-box' }}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                style={{
+                  position: 'absolute',
+                  right: '12px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  background: 'transparent',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontSize: '11px',
+                  color: '#888',
+                  padding: '4px 6px',
+                  fontWeight: '500',
+                  letterSpacing: '0.5px',
+                  transition: 'color 0.2s',
+                  userSelect: 'none'
+                }}
+                onMouseEnter={(e) => e.target.style.color = '#555'}
+                onMouseLeave={(e) => e.target.style.color = '#888'}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? 'HIDE' : 'SHOW'}
+              </button>
+            </div>
+            <div style={{ 
+              marginTop: '8px', 
+              fontSize: '12px', 
+              color: '#666',
+              lineHeight: '1.5'
+            }}>
+              <div style={{ marginBottom: '4px', fontWeight: '500' }}>Password requirements:</div>
+              <ul style={{ margin: 0, paddingLeft: '20px' }}>
+                <li>At least 8 characters long</li>
+                <li>Contains at least one uppercase letter</li>
+                <li>Contains at least one lowercase letter</li>
+                <li>Contains at least one digit</li>
+              </ul>
+            </div>
           </label>
           {status.error && <div className="auth-message error">{status.error}</div>}
           {status.success && <div className="auth-message success">{status.success}</div>}
