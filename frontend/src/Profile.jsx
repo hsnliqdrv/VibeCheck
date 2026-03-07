@@ -7,6 +7,7 @@ import {
   updateAuraProfile,
   getCuratorStats,
 } from "./services/api";
+import { getAvatarUrl } from "./utils/avatarUrl";
 import "./Profile.css";
 
 const CATEGORY_ICONS = {
@@ -269,7 +270,10 @@ export default function Profile() {
                 />
               ) : profileForm.avatar ? (
                 <div className="avatar-preview">
-                  <img src={profileForm.avatar} alt="Avatar" />
+                  <img
+                    src={getAvatarUrl(profileForm.avatar, userProfile?.updatedAt)}
+                    alt="Avatar"
+                  />
                 </div>
               ) : (
                 <p className="field-value">No avatar</p>

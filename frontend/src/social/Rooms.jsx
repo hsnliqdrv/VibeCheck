@@ -27,6 +27,7 @@ import {
   addComment,
   getUserById,
 } from '../services/api';
+import { getAvatarUrl } from '../utils/avatarUrl';
 import './Rooms.css';
 
 const PLATFORM_ICONS = {
@@ -674,7 +675,7 @@ const Rooms = () => {
                   <div className="rooms-profile-body">
                     {profilePopup.user.avatar && (
                       <img
-                        src={profilePopup.user.avatar}
+                        src={getAvatarUrl(profilePopup.user.avatar, profilePopup.user.updatedAt)}
                         alt={profilePopup.user.username}
                         className="rooms-profile-avatar"
                       />

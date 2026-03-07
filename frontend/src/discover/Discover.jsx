@@ -7,6 +7,7 @@ import {
     ExternalLink, User
 } from 'lucide-react';
 import { getAuraMatches, getUserById } from '../services/api';
+import { getAvatarUrl } from '../utils/avatarUrl';
 import './Discover.css';
 
 const containerVariants = {
@@ -113,7 +114,11 @@ const MatchCard = React.memo(({ match, itemVariants, onOpenProfile }) => {
             <div className="ds-card-body">
                 <div className="ds-user">
                     <div className="ds-avatar-wrap">
-                        <img src={user.avatar} alt={user.username} className="ds-avatar" />
+                        <img
+                            src={getAvatarUrl(user.avatar, user.updatedAt)}
+                            alt={user.username}
+                            className="ds-avatar"
+                        />
                         <div className="ds-online-indicator" />
                     </div>
                     <div className="ds-user-text">
@@ -487,7 +492,7 @@ const DiscoverPage = () => {
                                 <div className="ds-profile-body">
                                     {profilePopup.user.avatar && (
                                         <img
-                                            src={profilePopup.user.avatar}
+                                            src={getAvatarUrl(profilePopup.user.avatar, profilePopup.user.updatedAt)}
                                             alt={profilePopup.user.username}
                                             className="ds-profile-avatar"
                                         />
