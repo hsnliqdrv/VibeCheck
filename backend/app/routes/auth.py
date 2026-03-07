@@ -7,6 +7,7 @@ import random
 import re
 from app.database import get_db
 from app.models.user import User
+from app.services.email_service import send_verification_email, send_password_reset_email
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -277,14 +278,11 @@ def register():
                 'message': 'Email or username already exists'
             }), 409
         
-        # Log verification URL only in debug/development mode
-        if current_app.debug:
-            verification_url = f"http://localhost:3000/api/v1/auth/verify-email?token={raw_token}"
-            print(f"\n{'='*60}")
-            print(f"📧 EMAIL VERIFICATION for {email}")
-            print(f"   Token: {raw_token}")
-            print(f"   URL:   {verification_url}")
-            print(f"{'='*60}\n")
+        # Send verification email via Resend
+        try:
+            send_verification_email(email, username, raw_token)
+        except Exception as mail_err:
+            current_app.logger.error(f"Failed to send verification email to {email}: {mail_err}")
         
         # Do NOT issue JWT at registration — user must verify email first
         return jsonify({
@@ -456,18 +454,13 @@ def forgot_password():
         user = db.query(User).filter_by(email=email).first()
         
         if user and user.email_verified:
-            # Generate reset token
             raw_token = user.generate_reset_token()
             db.commit()
             
-            # Log reset URL only in debug/development mode
-            if current_app.debug:
-                reset_url = f"http://localhost:3000/reset-password?token={raw_token}"
-                print(f"\n{'='*60}")
-                print(f"🔑 PASSWORD RESET for {email}")
-                print(f"   Token: {raw_token}")
-                print(f"   URL:   {reset_url}")
-                print(f"{'='*60}\n")
+            try:
+                send_password_reset_email(email, user.username, raw_token)
+            except Exception as mail_err:
+                current_app.logger.error(f"Failed to send password reset email to {email}: {mail_err}")
         
         return jsonify({
             'message': success_message
