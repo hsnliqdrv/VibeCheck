@@ -48,6 +48,7 @@ export default function Profile() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [avatarUploading, setAvatarUploading] = useState(false);
+  const [avatarCacheBuster, setAvatarCacheBuster] = useState(null);
 
   const [editingProfile, setEditingProfile] = useState(false);
   const [editingAura, setEditingAura] = useState(false);
@@ -77,6 +78,7 @@ export default function Profile() {
 
         if (userRes.status === "fulfilled") {
           setUserProfile(userRes.value);
+          setAvatarCacheBuster(userRes.value.updatedAt || null);
           setProfileForm({
             bio: userRes.value.bio || "",
             avatar: userRes.value.avatar || "",
@@ -125,6 +127,8 @@ export default function Profile() {
     try {
       const updated = await updateUserProfile(profileForm);
       setUserProfile(updated);
+      // Avatar URL can stay the same while image content changes, so force a new cache token after save.
+      setAvatarCacheBuster(Date.now());
       setEditingProfile(false);
     } catch (err) {
       setError(err.response?.data?.message || "Failed to update profile");
@@ -250,6 +254,7 @@ export default function Profile() {
         ...prev,
         avatar: uploadInfo.cdn_url,
       }));
+      setAvatarCacheBuster(Date.now());
     } catch (err) {
       setError(err.response?.data?.error || err.response?.data?.message || err.message || "Failed to upload avatar");
     } finally {
@@ -325,7 +330,7 @@ export default function Profile() {
               ) : profileForm.avatar ? (
                 <div className="avatar-preview">
                   <img
-                    src={getAvatarUrl(profileForm.avatar, userProfile?.updatedAt)}
+                    src={getAvatarUrl(profileForm.avatar, avatarCacheBuster || userProfile?.updatedAt)}
                     alt="Avatar"
                   />
                 </div>
