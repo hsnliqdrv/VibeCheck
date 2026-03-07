@@ -6,6 +6,8 @@ import {
   getAuraProfile,
   updateAuraProfile,
   getCuratorStats,
+  getAvatarUploadUrl,
+  uploadToPresignedUrl,
 } from "./services/api";
 import "./Profile.css";
 
@@ -37,11 +39,14 @@ const PLATFORM_LABELS = {
 };
 
 export default function Profile() {
+  const AVATAR_ALLOWED_EXTENSIONS = ["jpg", "jpeg", "png", "webp"];
+
   const [userProfile, setUserProfile] = useState(null);
   const [auraProfile, setAuraProfile] = useState(null);
   const [curatorStats, setCuratorStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [avatarUploading, setAvatarUploading] = useState(false);
 
   const [editingProfile, setEditingProfile] = useState(false);
   const [editingAura, setEditingAura] = useState(false);
@@ -209,6 +214,49 @@ export default function Profile() {
     });
   };
 
+  const getFileExtension = (file) => {
+    const fileName = file?.name || "";
+    const extension = fileName.split(".").pop();
+    return extension ? extension.toLowerCase() : "";
+  };
+
+  const handleAvatarFileChange = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const extension = getFileExtension(file);
+    if (!AVATAR_ALLOWED_EXTENSIONS.includes(extension)) {
+      setError("Invalid avatar format. Use jpg, jpeg, png, or webp.");
+      event.target.value = "";
+      return;
+    }
+
+    try {
+      setAvatarUploading(true);
+      setError(null);
+
+      const uploadInfo = await getAvatarUploadUrl(extension);
+
+      if (uploadInfo.max_size_bytes && file.size > uploadInfo.max_size_bytes) {
+        throw new Error(
+          `Avatar is too large. Maximum size is ${Math.floor(uploadInfo.max_size_bytes / (1024 * 1024))} MB.`
+        );
+      }
+
+      await uploadToPresignedUrl(uploadInfo.presigned_url, file, file.type || "image/jpeg");
+
+      setProfileForm((prev) => ({
+        ...prev,
+        avatar: uploadInfo.cdn_url,
+      }));
+    } catch (err) {
+      setError(err.response?.data?.error || err.response?.data?.message || err.message || "Failed to upload avatar");
+    } finally {
+      setAvatarUploading(false);
+      event.target.value = "";
+    }
+  };
+
   if (loading) return <div className="profile-container">Loading...</div>;
 
   return (
@@ -256,17 +304,23 @@ export default function Profile() {
             </div>
 
             <div className="profile-field">
-              <label>Avatar URL</label>
+              <label>Avatar</label>
               {editingProfile ? (
-                <input
-                  type="url"
-                  value={profileForm.avatar}
-                  onChange={(e) =>
-                    setProfileForm({ ...profileForm, avatar: e.target.value })
-                  }
-                  className="text-input"
-                  placeholder="https://example.com/avatar.jpg"
-                />
+                <>
+                  <input
+                    type="file"
+                    accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                    onChange={handleAvatarFileChange}
+                    className="text-input"
+                    disabled={avatarUploading}
+                  />
+                  {avatarUploading && <p className="field-value">Uploading avatar...</p>}
+                  {profileForm.avatar && (
+                    <p className="field-value" style={{ wordBreak: "break-all" }}>
+                      {profileForm.avatar}
+                    </p>
+                  )}
+                </>
               ) : profileForm.avatar ? (
                 <div className="avatar-preview">
                   <img src={profileForm.avatar} alt="Avatar" />
