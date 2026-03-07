@@ -138,6 +138,35 @@ export const addComment = (postId, body) =>
 export const getDiscoveryFeed = (params = {}) =>
   api.get("/discovery/feed", { params }).then((r) => r.data);
 
+// Uploads
+export const getAvatarUploadUrl = (fileExtension) =>
+  api
+    .post("/upload/avatar", null, { params: { file_extension: fileExtension } })
+    .then((r) => r.data);
+
+export const getPostUploadUrl = (fileExtension) =>
+  api
+    .post("/upload/post", null, { params: { file_extension: fileExtension } })
+    .then((r) => r.data);
+
+export const uploadToPresignedUrl = async (presignedUrl, fileBlob, fileType) => {
+  const response = await fetch(presignedUrl, {
+    method: "PUT",
+    body: fileBlob,
+    headers: {
+      "Content-Type": fileType,
+      "x-amz-acl": "public-read",
+    },
+  });
+
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(`Upload failed (${response.status}): ${body}`);
+  }
+
+  return true;
+};
+
 const CATEGORY_FETCHERS = {
   cinema: getMovies,
   music: getAlbums,
