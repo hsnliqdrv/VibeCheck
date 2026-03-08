@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from sqlalchemy import func
+import re
 from app.database import get_db
 from app.models.user import User
 from app.models.share import Share
@@ -9,6 +10,7 @@ from app.services.badge_service import BadgeService
 from typing import cast, List, Optional
 
 aura_bp = Blueprint('aura', __name__)
+HEX_COLOR_RE = re.compile(r'^#[0-9A-Fa-f]{6}$')
 
 
 # ──────────────────────────────────────────────
@@ -475,6 +477,13 @@ def create_share():
                 'error': 'Bad Request',
                 'message': 'Caption must be 500 characters or less'
             }), 400
+
+        dominant_color = data.get('dominantColor')
+        if dominant_color is not None and not HEX_COLOR_RE.match(dominant_color):
+            return jsonify({
+                'error': 'Bad Request',
+                'message': 'dominantColor must be a valid hex color in #RRGGBB format'
+            }), 400
         
         db = get_db()
         
@@ -497,7 +506,7 @@ def create_share():
             content_id=data['contentId'],
             title=title,
             image=data.get('image'),
-            dominant_color=data.get('dominantColor'),
+            dominant_color=dominant_color.upper() if dominant_color else None,
             caption=caption
         )
         

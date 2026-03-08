@@ -39,7 +39,8 @@ export async function extractDominantColor(imageUrl) {
           }
           
           // Quantize colors to reduce variation (round to nearest 32)
-          const quantize = (val) => Math.round(val / 32) * 32;
+          // and clamp to 0..255 so hex conversion stays 2 chars per channel.
+          const quantize = (val) => Math.min(255, Math.max(0, Math.round(val / 32) * 32));
           const key = `${quantize(r)},${quantize(g)},${quantize(b)}`;
           
           colorMap[key] = (colorMap[key] || 0) + 1;
@@ -63,8 +64,13 @@ export async function extractDominantColor(imageUrl) {
         }
         
         // Convert to hex
-        const [r, g, b] = dominantColor.split(',').map(Number);
-        const hex = `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`.toUpperCase();
+        const [r, g, b] = dominantColor
+          .split(',')
+          .map(Number)
+          .map((value) => Math.min(255, Math.max(0, value)));
+        const hex = `#${r.toString(16).padStart(2, '0')}${g
+          .toString(16)
+          .padStart(2, '0')}${b.toString(16).padStart(2, '0')}`.toUpperCase();
         
         resolve(hex);
       } catch (error) {
