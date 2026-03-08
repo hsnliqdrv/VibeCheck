@@ -862,6 +862,10 @@ paths:
                 caption:
                   type: string
                   maxLength: 500
+                dominantColor:
+                  type: string
+                  pattern: '^#[0-9A-Fa-f]{6}$'
+                  description: Hex color code determined by frontend (e.g., #FF5733)
       responses:
         '201':
           description: Share created

@@ -559,12 +559,13 @@ def create_share():
             import traceback
             traceback.print_exc()
 
-        # Recompute aura profile (colors + tags) from latest activity
-        try:
-            from app.services.aura_inference import infer_aura_for_user
-            infer_aura_for_user(db, current_user_id)
-        except Exception as aura_error:
-            print(f"Aura inference error: {aura_error}")
+        # Update aura colors if a dominant color was provided
+        if data.get('dominantColor'):
+            try:
+                from app.services.aura_inference import update_user_aura_colors
+                update_user_aura_colors(db, current_user_id, data['dominantColor'])
+            except Exception as color_error:
+                print(f"Aura color update error: {color_error}")
 
         return jsonify(new_share.to_dict()), 201
     

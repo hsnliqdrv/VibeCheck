@@ -2,6 +2,7 @@ import { useState, useCallback, useRef, useMemo } from "react";
 import { Clapperboard, Music, Gamepad2, BookOpen, Plane, Download, Share2, ExternalLink, Crosshair, Loader2, Send } from "lucide-react";
 import * as htmlToImage from "html-to-image";
 import { createShare } from "../../services/api";
+import { extractDominantColor } from "../../utils/colorExtractor";
 import StoryCard from "./StoryCard";
 import ContentSelector from "./ContentSelector";
 import StoryCustomizer from "./StoryCustomizer";
@@ -76,6 +77,30 @@ export default function StoryGenerator() {
     setCaption("");
     setShareResult(null);
   };
+
+  const handleContentSelect = useCallback(async (content) => {
+    // Set content immediately so UI is responsive
+    setSelectedContent(content);
+    
+    // Extract dominant color asynchronously
+    const imageUrl = getImageFromContent(category, content);
+    if (imageUrl) {
+      try {
+        const dominantColor = await extractDominantColor(imageUrl);
+        // Update the content with the extracted color
+        setSelectedContent(prev => {
+          // Only update if this is still the active content
+          if (prev?.id === content.id) {
+            return { ...prev, dominantColor };
+          }
+          return prev;
+        });
+      } catch (error) {
+        console.error('Failed to extract dominant color:', error);
+        // Content is still usable without dominant color
+      }
+    }
+  }, [category]);
 
   const updateStyle = (key, value) => {
     setStyle((prev) => ({ ...prev, [key]: value }));
@@ -201,7 +226,7 @@ export default function StoryGenerator() {
         <ContentSelector
           category={category}
           selected={selectedContent}
-          onSelect={setSelectedContent}
+          onSelect={handleContentSelect}
         />
 
         {selectedContent && (

@@ -61,6 +61,83 @@ def _deduplicate_colors(colors: list[str], min_distance: float = 30.0) -> list[s
     return unique
 
 
+def update_user_aura_colors(db, user_id: str, new_color: str) -> None:
+    """
+    Add a new dominant color to the user's aura_colors, maintaining top 5 colors.
+    
+    This function is called when a user creates a share with a dominant color
+    determined by the frontend. It maintains a history of the most recent/frequent
+    colors, keeping only the top 5.
+    
+    Args:
+        db: Database session
+        user_id: User ID
+        new_color: Hex color code (e.g., #FF5733) from the frontend
+    """
+    try:
+        from app.models.user import User
+        from app.models.share import Share
+        from datetime import datetime, timedelta
+        
+        # Validate color format
+        if not new_color or not _HEX_RE.match(new_color):
+            print(f"[update_user_aura_colors] Invalid color format: {new_color}")
+            return
+        
+        # Normalize to uppercase
+        new_color = new_color.upper()
+        
+        user: Optional[User] = db.query(User).filter_by(user_id=user_id).first()
+        if not user:
+            return
+        
+        # Get recent shares to build color frequency
+        cutoff = datetime.utcnow() - timedelta(days=RECENCY_WINDOW_DAYS)
+        recent_shares = (
+            db.query(Share)
+            .filter(Share.user_id == user_id, Share.created_at >= cutoff)
+            .order_by(Share.created_at.desc())
+            .all()
+        )
+        
+        # Build recency-weighted color scores
+        color_scores: dict[str, float] = {}
+        total = len(recent_shares)
+        
+        for rank, share in enumerate(recent_shares):
+            if not share.dominant_color or not _HEX_RE.match(share.dominant_color):
+                continue
+            color = share.dominant_color.upper()
+            # Newer items get higher weight (1.0 for newest, 0.5 for oldest)
+            weight = 1.0 - (rank / max(total, 1)) * 0.5
+            color_scores[color] = color_scores.get(color, 0.0) + weight
+        
+        # Ensure the new color is included with a boost (as it's the most recent)
+        color_scores[new_color] = color_scores.get(new_color, 0.0) + 1.5
+        
+        # Sort by score descending
+        ranked_colors = [
+            c for c, _ in sorted(color_scores.items(), key=lambda x: -x[1])
+        ]
+        
+        # De-duplicate perceptually-similar colors and keep top 5
+        deduped = _deduplicate_colors(ranked_colors)
+        new_aura_colors = deduped[:MAX_AURA_COLORS]
+        
+        # Update user's aura colors
+        user.aura_colors = new_aura_colors
+        db.commit()
+        
+        print(f"[update_user_aura_colors] Updated aura colors for user {user_id}: {new_aura_colors}")
+        
+    except Exception as exc:
+        print(f"[update_user_aura_colors] Failed for user {user_id}: {exc}")
+        try:
+            db.rollback()
+        except Exception:
+            pass
+
+
 # ──────────────────────────────────────────────
 # Main inference function
 # ──────────────────────────────────────────────
