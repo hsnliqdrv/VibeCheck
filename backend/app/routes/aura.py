@@ -576,6 +576,13 @@ def create_share():
             except Exception as color_error:
                 print(f"Aura color update error: {color_error}")
 
+        # Recompute aura profile so aesthetic tags stay in sync with activity.
+        try:
+            from app.services.aura_inference import infer_aura_for_user
+            infer_aura_for_user(db, current_user_id)
+        except Exception as aura_error:
+            print(f"Aura inference error: {aura_error}")
+
         return jsonify(new_share.to_dict()), 201
     
     except Exception as e:
