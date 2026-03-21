@@ -292,12 +292,11 @@ const DiscoverPage = () => {
     }, [filteredMatches]);
 
     const sharedAesthetics = useMemo(() => {
-        const allTags = new Set();
+        const sharedItems = new Set();
         filteredMatches.forEach(m => {
-            const user = m.user || m;
-            (user.aestheticTags || []).forEach(tag => allTags.add(tag));
+            (m.sharedAesthetics || []).forEach(item => sharedItems.add(item));
         });
-        return allTags.size;
+        return sharedItems.size;
     }, [filteredMatches]);
 
     const handleExploreMore = React.useCallback(() => {

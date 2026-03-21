@@ -723,6 +723,10 @@ def get_aura_matches():
             
             # Round similarity score
             similarity_score = min(100, max(0, round(similarity_score)))
+
+            # Skip users with 0% compatibility
+            if similarity_score <= 0:
+                continue
             
             # Build match reason
             match_reason = ' and '.join(match_reasons) if match_reasons else 'You both have similar aesthetic preferences'
