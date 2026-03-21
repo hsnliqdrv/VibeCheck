@@ -631,6 +631,9 @@
 }
 
 .ds-load-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
     padding: 12px 32px;
     background: #fff;
     border: 1.5px solid rgba(107, 107, 248, 0.3);
@@ -645,6 +648,11 @@
     background: #6b6bf8;
     color: #fff;
     box-shadow: 0 8px 20px rgba(107, 107, 248, 0.25);
+}
+
+.ds-load-btn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
 }
 
 /* Loading and Error States */

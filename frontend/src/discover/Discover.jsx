@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
     Search, SlidersHorizontal, Sparkles, Zap, Star,
     Users, Activity, Fingerprint, Loader2,
-    ChevronDown, ChevronUp, X,
+    ChevronDown, ChevronUp, X, RefreshCw,
     ExternalLink, User
 } from 'lucide-react';
 import { getAuraMatches, getUserById } from '../services/api';
@@ -213,27 +213,38 @@ const DiscoverPage = () => {
     const [activeTab, setActiveTab] = useState('All');
     const [matches, setMatches] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
     const [error, setError] = useState(null);
     const [showFilters, setShowFilters] = useState(false);
     const [selectedCategory, setSelectedCategory] = useState('All');
     const [profilePopup, setProfilePopup] = useState({ show: false, user: null, loading: false });
 
-    useEffect(() => {
-        const fetchMatches = async () => {
-            try {
+    const fetchMatches = React.useCallback(async ({ isRefresh = false } = {}) => {
+        try {
+            setError(null);
+            if (isRefresh) {
+                setRefreshing(true);
+            } else {
                 setLoading(true);
-                const response = await getAuraMatches();
-                setMatches(response.data || []);
-            } catch (err) {
-                console.error('Failed to fetch matches:', err);
-                setError('Could not load matches. Please try again later.');
-            } finally {
+            }
+
+            const response = await getAuraMatches({ _ts: Date.now() });
+            setMatches(response.data || []);
+        } catch (err) {
+            console.error('Failed to fetch matches:', err);
+            setError('Could not load matches. Please try again later.');
+        } finally {
+            if (isRefresh) {
+                setRefreshing(false);
+            } else {
                 setLoading(false);
             }
-        };
-
-        fetchMatches();
+        }
     }, []);
+
+    useEffect(() => {
+        fetchMatches();
+    }, [fetchMatches]);
 
     const handleOpenProfile = async (userId) => {
         if (!userId) return;
@@ -290,15 +301,15 @@ const DiscoverPage = () => {
     }, [filteredMatches]);
 
     const handleExploreMore = React.useCallback(() => {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    }, []);
+        fetchMatches({ isRefresh: true });
+    }, [fetchMatches]);
 
     if (error) {
         return (
             <div className="ds-error-state">
                 <Activity size={40} />
                 <h3>{error}</h3>
-                <button onClick={() => window.location.reload()} className="ds-btn ds-btn--primary">
+                <button onClick={() => fetchMatches()} className="ds-btn ds-btn--primary">
                     Retry
                 </button>
             </div>
@@ -458,8 +469,13 @@ const DiscoverPage = () => {
             </div>
 
             <motion.footer variants={itemVariants} className="ds-footer">
-                <button className="ds-load-btn" onClick={handleExploreMore}>
-                    Explore More
+                <button
+                    className="ds-load-btn"
+                    onClick={handleExploreMore}
+                    disabled={loading || refreshing}
+                >
+                    <RefreshCw size={16} className={refreshing ? 'ds-spinner' : ''} />
+                    {refreshing ? 'Refreshing...' : 'Refresh for 5 more'}
                 </button>
             </motion.footer>
 

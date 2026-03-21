@@ -17,3 +17,4 @@ htmlcov/
 # Build artifacts
 *.egg-info/
 build/
+test_vibecheck.db

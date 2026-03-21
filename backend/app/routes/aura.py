@@ -602,33 +602,23 @@ def create_share():
 @jwt_required()
 def get_aura_matches():
     """
-    Get aura matches (similar users based on aesthetic preferences)
+    Get aura matches (sampled users ranked by aesthetic similarity)
     ---
     tags:
       - Aura
     security:
       - Bearer: []
-    parameters:
-      - name: limit
-        in: query
-        type: integer
-        default: 10
-        minimum: 1
-        maximum: 50
-        description: Maximum number of matches to return
-      - name: offset
-        in: query
-        type: integer
-        default: 0
-        minimum: 0
-        description: Number of results to skip for pagination
     responses:
       200:
-        description: List of aura matches
+                description: Best and worst aura matches from a random sample
         schema:
           type: object
           properties:
-            data:
+                        bestMatches:
+                            type: array
+                        worstMatches:
+                            type: array
+                        data:
               type: array
             total:
               type: integer
@@ -638,16 +628,6 @@ def get_aura_matches():
     try:
         current_user_id = get_jwt_identity()
         db = get_db()
-        
-        # Pagination parameters
-        limit = request.args.get('limit', 10, type=int)
-        offset = request.args.get('offset', 0, type=int)
-        
-        # Validate pagination
-        if limit < 1 or limit > 50:
-            limit = 10
-        if offset < 0:
-            offset = 0
         
         # Get current user
         current_user = db.query(User).filter_by(user_id=current_user_id).first()
@@ -670,8 +650,10 @@ def get_aura_matches():
         current_aesthetic_tags = set(cur_tags if cur_tags is not None else [])
         current_aura_colors = set(cur_colors if cur_colors is not None else [])
         
-        # Get all other users
-        other_users = db.query(User).filter(User.user_id != current_user_id).all()
+        # Get a random sample of up to 100 other users
+        other_users = db.query(User).filter(
+            User.user_id != current_user_id
+        ).order_by(func.random()).limit(100).all()
         
         matches = []
         
@@ -742,61 +724,65 @@ def get_aura_matches():
             # Round similarity score
             similarity_score = min(100, max(0, round(similarity_score)))
             
-            # Only include matches with similarity > 0
-            if similarity_score > 0:
-                # Build match reason
-                match_reason = ' and '.join(match_reasons) if match_reasons else 'You both have similar aesthetic preferences'
-                
-                # Get user's recent shares for profile
-                recent_shares = db.query(Share).filter_by(
-                    user_id=user.user_id
-                ).order_by(Share.created_at.desc()).limit(10).all()
-                
-                # Calculate top categories for matched user
-                category_counts_for_match = db.query(
-                    Share.category,
-                    func.count(Share.id).label('count')
-                ).filter_by(user_id=user.user_id).group_by(Share.category).all()
-                
-                total_shares_for_match = sum([cast(int, c.count) for c in category_counts_for_match], 0)
-                top_categories_match = []
-                
-                if total_shares_for_match > 0:
-                    for cat in category_counts_for_match:
-                        percentage = round((cast(int, cat.count) / total_shares_for_match) * 100, 1)
-                        top_categories_match.append({
-                            'category': cat.category,
-                            'percentage': percentage
-                        })
-                    top_categories_match.sort(key=lambda x: x['percentage'], reverse=True)
-                
-                matches.append({
-                    'user': {
-                        'userId': user.user_id,
-                        'username': user.username,
-                        'avatar': user.avatar,
-                        'bio': user.bio,
-                        'recentShares': [share.to_dict() for share in recent_shares],
-                        'auraColors': user.aura_colors or [],
-                        'aestheticTags': user.aesthetic_tags or [],
-                        'topCategories': top_categories_match,
-                        'socialMediaLinks': user.social_media_links or []
-                    },
-                    'similarityScore': similarity_score,
-                    'sharedAesthetics': list(set(shared_aesthetics)),
-                    'matchReason': match_reason
-                })
+            # Build match reason
+            match_reason = ' and '.join(match_reasons) if match_reasons else 'You both have similar aesthetic preferences'
+            
+            # Get user's recent shares for profile
+            recent_shares = db.query(Share).filter_by(
+                user_id=user.user_id
+            ).order_by(Share.created_at.desc()).limit(10).all()
+            
+            # Calculate top categories for matched user
+            category_counts_for_match = db.query(
+                Share.category,
+                func.count(Share.id).label('count')
+            ).filter_by(user_id=user.user_id).group_by(Share.category).all()
+            
+            total_shares_for_match = sum([cast(int, c.count) for c in category_counts_for_match], 0)
+            top_categories_match = []
+            
+            if total_shares_for_match > 0:
+                for cat in category_counts_for_match:
+                    percentage = round((cast(int, cat.count) / total_shares_for_match) * 100, 1)
+                    top_categories_match.append({
+                        'category': cat.category,
+                        'percentage': percentage
+                    })
+                top_categories_match.sort(key=lambda x: x['percentage'], reverse=True)
+            
+            matches.append({
+                'user': {
+                    'userId': user.user_id,
+                    'username': user.username,
+                    'avatar': user.avatar,
+                    'bio': user.bio,
+                    'recentShares': [share.to_dict() for share in recent_shares],
+                    'auraColors': user.aura_colors or [],
+                    'aestheticTags': user.aesthetic_tags or [],
+                    'topCategories': top_categories_match,
+                    'socialMediaLinks': user.social_media_links or []
+                },
+                'similarityScore': similarity_score,
+                'sharedAesthetics': list(set(shared_aesthetics)),
+                'matchReason': match_reason
+            })
         
         # Sort by similarity score descending
         matches.sort(key=lambda x: x['similarityScore'], reverse=True)
-        
-        # Paginate
-        total = len(matches)
-        paginated_matches = matches[offset:offset + limit]
+
+        best_matches = matches[:3]
+        best_user_ids = {m['user']['userId'] for m in best_matches}
+        worst_matches = [
+            match for match in sorted(matches, key=lambda x: x['similarityScore'])
+            if match['user']['userId'] not in best_user_ids
+        ][:2]
+        selected_matches = best_matches + worst_matches
         
         return jsonify({
-            'data': paginated_matches,
-            'total': total
+            'bestMatches': best_matches,
+            'worstMatches': worst_matches,
+            'data': selected_matches,
+            'total': len(selected_matches)
         }), 200
     
     except Exception as e:
