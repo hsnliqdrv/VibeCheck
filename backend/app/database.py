@@ -31,9 +31,11 @@ def init_db(app):
 
     # Seed default aesthetic rooms if missing
     from app.seed_rooms import seed_rooms
+    from app.seed_sample_users import seed_sample_users
     db = session_factory()
     try:
         seed_rooms(db)
+        seed_sample_users(db)
     finally:
         db.close()
 
