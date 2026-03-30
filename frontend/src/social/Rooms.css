@@ -1065,59 +1065,258 @@
   z-index: 9999;
   display: grid;
   place-items: center;
-  background: rgba(0, 0, 0, 0.45);
-  backdrop-filter: blur(6px);
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(8px);
+  padding: 20px;
 }
 .rooms-profile-popup {
   position: relative;
   background: #fff;
-  border-radius: 20px;
-  padding: 2.4rem 2rem;
-  max-width: 420px;
-  width: 90%;
-  text-align: center;
-  box-shadow: 0 24px 60px rgba(16, 18, 30, 0.22);
+  border-radius: 24px;
+  padding: 0;
+  max-width: 540px;
+  width: 92%;
+  max-height: 85vh;
+  overflow-y: auto;
+  box-shadow: 0 32px 80px rgba(16, 18, 30, 0.28);
+  scrollbar-width: thin;
+  scrollbar-color: rgba(102, 126, 234, 0.3) transparent;
+}
+.rooms-profile-popup::-webkit-scrollbar { width: 6px; }
+.rooms-profile-popup::-webkit-scrollbar-track { background: transparent; }
+.rooms-profile-popup::-webkit-scrollbar-thumb {
+  background: rgba(102, 126, 234, 0.25);
+  border-radius: 3px;
 }
 .rooms-profile-close {
-  position: absolute;
-  top: 1rem;
-  right: 1rem;
-  background: none;
-  border: none;
+  position: sticky;
+  top: 12px;
+  float: right;
+  margin-right: 12px;
+  z-index: 10;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(6px);
+  border: 1px solid rgba(29, 27, 34, 0.08);
   cursor: pointer;
   color: #888;
-  padding: 4px;
+  display: grid;
+  place-items: center;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
-.rooms-profile-close:hover { color: #333; }
+.rooms-profile-close:hover { color: #333; background: #fff; transform: rotate(90deg); }
 .rooms-profile-loading {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 0.75rem;
-  padding: 2rem 0;
+  padding: 4rem 0;
+}
+.rooms-profile-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.rooms-profile-header {
+  text-align: center;
+  padding: 2rem 2rem 1.5rem;
+  background: linear-gradient(180deg, rgba(102, 126, 234, 0.04) 0%, transparent 100%);
+  border-bottom: 1px solid rgba(29, 27, 34, 0.05);
 }
 .rooms-profile-avatar {
-  width: 80px;
-  height: 80px;
+  width: 88px;
+  height: 88px;
   border-radius: 50%;
   object-fit: cover;
   margin-bottom: 0.75rem;
-  border: 3px solid #667eea;
+  border: 3px solid #fff;
+  box-shadow: 0 4px 20px rgba(102, 126, 234, 0.2), 0 0 0 3px rgba(102, 126, 234, 0.15);
 }
-.rooms-profile-body h3 {
-  margin: 0 0 0.5rem;
-  font-size: 1.3rem;
+.rooms-profile-body .rooms-profile-header h3 {
+  margin: 0 0 0.35rem;
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: #1a1a1a;
 }
 .rooms-profile-bio {
-  color: #555;
-  font-size: 0.95rem;
-  margin: 0 0 1rem;
+  color: rgba(29, 27, 34, 0.6);
+  font-size: 0.9rem;
+  margin: 0 0 0.5rem;
+  line-height: 1.5;
 }
+.rooms-profile-joined {
+  color: rgba(29, 27, 34, 0.4);
+  font-size: 0.78rem;
+  margin: 0;
+  font-weight: 600;
+}
+
+/* Profile Popup Sections */
+.rooms-profile-section {
+  padding: 1.2rem 1.8rem;
+  border-bottom: 1px solid rgba(29, 27, 34, 0.04);
+}
+.rooms-profile-section:last-child { border-bottom: none; padding-bottom: 1.8rem; }
+.rooms-profile-section label {
+  display: block;
+  font-size: 0.65rem;
+  font-weight: 800;
+  color: rgba(29, 27, 34, 0.45);
+  letter-spacing: 0.12em;
+  margin-bottom: 10px;
+}
+
+/* Tags */
+.rooms-profile-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.rooms-profile-tag {
+  padding: 5px 14px;
+  background: rgba(102, 126, 234, 0.06);
+  border: 1px solid rgba(102, 126, 234, 0.1);
+  border-radius: 99px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #667eea;
+}
+
+/* Aura Colors */
+.rooms-profile-aura {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.rooms-profile-aura-dot {
+  width: 36px;
+  height: 26px;
+  border-radius: 8px;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.12);
+  transition: transform 0.2s ease;
+}
+.rooms-profile-aura-dot:hover { transform: scale(1.15); }
+
+/* Categories */
+.rooms-profile-categories {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.rooms-profile-cat-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.rooms-profile-cat-name {
+  width: 70px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: rgba(29, 27, 34, 0.65);
+  text-transform: capitalize;
+  flex-shrink: 0;
+}
+.rooms-profile-cat-bar {
+  flex: 1;
+  height: 7px;
+  background: rgba(29, 27, 34, 0.06);
+  border-radius: 99px;
+  overflow: hidden;
+}
+.rooms-profile-cat-fill {
+  height: 100%;
+  border-radius: 99px;
+  background: linear-gradient(90deg, #667eea, #764ba2);
+  transition: width 0.5s ease;
+}
+.rooms-profile-cat-pct {
+  width: 36px;
+  text-align: right;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: rgba(29, 27, 34, 0.55);
+  flex-shrink: 0;
+}
+
+/* Recent Shares */
+.rooms-profile-shares {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.rooms-profile-share {
+  border-radius: 12px;
+  overflow: hidden;
+  background: rgba(29, 27, 34, 0.03);
+  display: flex;
+  flex-direction: column;
+}
+.rooms-profile-share img {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+.rooms-profile-share:hover img { transform: scale(1.08); }
+.rooms-profile-share-title {
+  padding: 6px 8px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: rgba(29, 27, 34, 0.7);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Badges */
+.rooms-profile-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.rooms-profile-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  background: rgba(29, 27, 34, 0.03);
+  border: 1px solid rgba(29, 27, 34, 0.06);
+  border-radius: 10px;
+  transition: all 0.2s ease;
+}
+.rooms-profile-badge:hover {
+  background: rgba(102, 126, 234, 0.06);
+  border-color: rgba(102, 126, 234, 0.12);
+}
+.rooms-profile-badge-name {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+.rooms-profile-badge-rarity {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(29, 27, 34, 0.06);
+  color: rgba(29, 27, 34, 0.55);
+}
+.rooms-profile-badge-rarity--common { background: rgba(107, 114, 128, 0.1); color: #6b7280; }
+.rooms-profile-badge-rarity--rare { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
+.rooms-profile-badge-rarity--epic { background: rgba(139, 92, 246, 0.1); color: #8b5cf6; }
+.rooms-profile-badge-rarity--legendary { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
+
+/* Social Links in Popup */
 .rooms-profile-socials {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
-  justify-content: center;
+  justify-content: flex-start;
 }
 .rooms-profile-social-link {
   display: inline-flex;
@@ -1143,3 +1342,18 @@
 .rooms-profile-social-link--spotify   { background: #1DB954; }
 .rooms-profile-social-link--twitch    { background: #9146FF; }
 .rooms-profile-social-link--other     { background: #667eea; }
+
+@media (max-width: 768px) {
+  .rooms-profile-popup {
+    max-width: 100%;
+    width: 95%;
+    max-height: 90vh;
+    border-radius: 20px;
+  }
+  .rooms-profile-shares {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .rooms-profile-section {
+    padding: 1rem 1.2rem;
+  }
+}
