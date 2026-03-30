@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useMemo } from "react";
 import { Clapperboard, Music, Gamepad2, BookOpen, Plane, Download, Share2, ExternalLink, Crosshair, Loader2, Send } from "lucide-react";
-import * as htmlToImage from "html-to-image";
+import { domToBlob } from "modern-screenshot";
 import { createShare } from "../../services/api";
 import { extractDominantColor } from "../../utils/colorExtractor";
 import StoryCard from "./StoryCard";
@@ -108,22 +108,32 @@ export default function StoryGenerator() {
 
 
   const exportStoryImage = useCallback(async (node) => {
-    // We add a tiny delay and force a clear layout to ensure 
-    // htmlToImage doesn't capture the previous cached image
-    await new Promise(res => setTimeout(res, 50));
+    // Small delay ensures layout is fully settled before capture
+    await new Promise(res => setTimeout(res, 100));
 
-    const blob = await htmlToImage.toBlob(node, {
-      cacheBust: true,
-      skipFonts: false,
-      pixelRatio: 2,
-      width: 1080,
-      height: 1920,
-      style: {
-        transform: 'scale(1)',
-        transformOrigin: 'top left',
-      },
-    });
-    return blob;
+    // Try high-res first, fall back to 1x for browsers that struggle (Firefox/Linux)
+    for (const scale of [2, 1]) {
+      try {
+        const blob = await domToBlob(node, {
+          width: 1080,
+          height: 1920,
+          scale,
+          style: {
+            transform: 'scale(1)',
+            transformOrigin: 'top left',
+          },
+          features: {
+            // Removes resource-size limits that can trip Firefox
+            removeControlCharacter: false,
+          },
+        });
+        if (blob && blob.size > 0) return blob;
+      } catch (err) {
+        console.warn(`Export attempt (scale=${scale}) failed:`, err);
+        if (scale === 1) throw err; // last attempt, rethrow
+      }
+    }
+    throw new Error('All export attempts failed');
   }, []);
 
   const handleDownload = useCallback(async () => {
