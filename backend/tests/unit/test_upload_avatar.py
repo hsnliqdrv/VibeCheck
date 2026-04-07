@@ -2,7 +2,9 @@
 Test script for avatar upload to DigitalOcean Spaces
 
 Usage:
-    python test_upload_avatar.py
+    python tests/unit/test_upload_avatar.py
+
+Run from backend directory for predictable relative paths.
 
 This script:
 1. Authenticates with the API

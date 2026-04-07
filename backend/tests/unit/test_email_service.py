@@ -6,17 +6,22 @@ Tests for the Resend email integration:
 Uses Flask test client with SQLite (no running server or Docker needed).
 All Resend API calls are mocked via unittest.mock.
 
-Usage:
-    cd <repo-root>
-    pytest backend/tests/unit/test_email_service.py -v
+Usage (from backend directory):
+    pytest tests/unit/test_email_service.py -v
+
+Optional explicit backend path (otherwise current directory is used):
+    BACKEND_PATH=/absolute/path/to/backend pytest tests/unit/test_email_service.py -v
 """
 
 import os
 import sys
+from pathlib import Path
 import pytest
 from unittest.mock import patch, MagicMock
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+backend_root = Path(os.getenv("BACKEND_PATH", Path.cwd())).resolve()
+if str(backend_root) not in sys.path:
+    sys.path.insert(0, str(backend_root))
 
 from app.config import Config
 Config.SQLALCHEMY_DATABASE_URI = 'sqlite:///test_email_vibecheck.db'
@@ -46,10 +51,10 @@ def app():
         'FRONTEND_URL': 'http://localhost:5173',
     })
     yield application
-    db_path = os.path.join(os.path.dirname(__file__), '..', 'test_email_vibecheck.db')
-    if os.path.exists(db_path):
+    db_path = Path.cwd() / 'test_email_vibecheck.db'
+    if db_path.exists():
         try:
-            os.unlink(db_path)
+            db_path.unlink()
         except OSError:
             pass
 

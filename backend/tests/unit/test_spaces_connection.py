@@ -1,13 +1,20 @@
 """
 Test DigitalOcean Spaces connection directly
+
+Usage (from backend directory):
+    python tests/unit/test_spaces_connection.py
+
+Optional .env path (otherwise current directory is used):
+    DOTENV_PATH=/absolute/path/to/.env python tests/unit/test_spaces_connection.py
 """
 import os
 import sys
 from pathlib import Path
 from dotenv import load_dotenv
 
-# Load .env file
-load_dotenv(Path(__file__).parent.parent / '.env')
+# Load .env from explicit path when provided, otherwise current directory.
+dotenv_path = Path(os.getenv("DOTENV_PATH", Path.cwd() / ".env"))
+load_dotenv(dotenv_path)
 
 print("[INFO] Testing DigitalOcean Spaces connection...")
 print()
@@ -75,7 +82,7 @@ try:
     else:
         print("[ERROR] URL missing HTTPS scheme!")
     
-    if do_spaces_endpoint.split('//')[1] in presigned_url:
+    if do_spaces_endpoint and do_spaces_endpoint.split('//')[1] in presigned_url:
         print(f"[SUCCESS] URL contains correct endpoint")
     else:
         print(f"[WARNING] URL might not contain expected endpoint")

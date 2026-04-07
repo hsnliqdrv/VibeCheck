@@ -8,19 +8,24 @@ Tests for new backend features:
 
 Uses Flask test client (no running server needed).
 
-Usage (from the repository root):
-    cd <repo-root>
-    pytest backend/tests/test_new_endpoints.py -v
+Usage (from backend directory):
+    pytest tests/unit/test_new_endpoints.py -v
+
+Optional explicit backend path (otherwise current directory is used):
+    BACKEND_PATH=/absolute/path/to/backend pytest tests/unit/test_new_endpoints.py -v
 """
 
 import os
 import re
 import sys
+from pathlib import Path
 import pytest
 
-# Ensure the backend root is on sys.path
-# Go up two directories from tests/unit/ to /backend
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+# Ensure the backend root is on sys.path.
+# Use explicit BACKEND_PATH when set, otherwise use current directory.
+backend_root = Path(os.getenv("BACKEND_PATH", Path.cwd())).resolve()
+if str(backend_root) not in sys.path:
+    sys.path.insert(0, str(backend_root))
 
 from app.config import Config
 Config.SQLALCHEMY_DATABASE_URI = 'sqlite:///test_vibecheck.db'
@@ -40,10 +45,10 @@ def app():
     application.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///test_vibecheck.db'
     yield application
     # Cleanup: remove test database
-    db_path = os.path.join(os.path.dirname(__file__), '..', 'test_vibecheck.db')
-    if os.path.exists(db_path):
+    db_path = Path.cwd() / 'test_vibecheck.db'
+    if db_path.exists():
         try:
-            os.unlink(db_path)
+            db_path.unlink()
         except OSError:
             pass
 

@@ -25,7 +25,43 @@ Tests are organized into two directories — no `-m` markers needed:
 | `tests/integration/` | Full API against running server | PostgreSQL | Yes |
 
 ### Unit Tests (`tests/unit/`)
-- **test_new_endpoints.py** — Email verification, forgot/reset password, social media links validation, badge formatting, discovery feed (32 tests, Flask test client)
+- **test_new_endpoints.py** — Auth/profile/discovery endpoint logic (pytest, SQLite)
+- **test_email_service.py** — Resend email integration behavior (pytest, mocked Resend API)
+- **test_seed_content.py** — Startup content seeding from all 5 categories (pytest, mocked providers)
+- **test_direct_upload.py** — Direct avatar presigned upload flow (script, requires running backend)
+- **test_spaces_connection.py** — DigitalOcean Spaces connectivity/presign validation (script)
+- **test_upload_avatar.py** — Avatar upload via presigned URL (script, requires running backend)
+- **test_upload_post.py** — Post image upload via presigned URL (script, requires running backend)
+
+### Run Each Unit File
+
+From `backend/`:
+
+```bash
+# pytest-based unit files
+pytest tests/unit/test_new_endpoints.py -v
+pytest tests/unit/test_email_service.py -v
+pytest tests/unit/test_seed_content.py -v
+
+# script-style unit files
+python tests/unit/test_direct_upload.py
+python tests/unit/test_spaces_connection.py
+python tests/unit/test_upload_avatar.py
+python tests/unit/test_upload_post.py
+```
+
+Optional explicit paths (otherwise current directory is used):
+
+```bash
+# backend import root for pytest files (fallback: current directory)
+BACKEND_PATH=/absolute/path/to/backend pytest tests/unit/test_new_endpoints.py -v
+
+# dotenv location for script-style files (fallback: ./ .env)
+DOTENV_PATH=/absolute/path/to/.env python tests/unit/test_spaces_connection.py
+
+# direct upload input image (fallback: ./example.png)
+TEST_FILE_PATH=/absolute/path/to/example.png python tests/unit/test_direct_upload.py
+```
 
 ### Integration Tests (`tests/integration/`)
 - **test_api.py** — Comprehensive API coverage via `VibeCheckAPITester` class against a running server (~211 tests)

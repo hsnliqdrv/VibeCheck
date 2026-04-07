@@ -32,10 +32,12 @@ def init_db(app):
     # Seed default aesthetic rooms if missing
     from app.seed_rooms import seed_rooms
     from app.seed_sample_users import seed_sample_users
+    from app.seed_content import seed_startup_content
     db = session_factory()
     try:
         seed_rooms(db)
         seed_sample_users(db)
+        seed_startup_content(db, items_per_category=5)
     finally:
         db.close()
 

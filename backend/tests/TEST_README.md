@@ -75,6 +75,37 @@ cd backend
 pytest tests/unit/
 ```
 
+Run each unit file individually:
+
+```bash
+# pytest-based unit tests
+pytest tests/unit/test_new_endpoints.py -v
+pytest tests/unit/test_email_service.py -v
+pytest tests/unit/test_seed_content.py -v
+
+# script-style tests
+python tests/unit/test_direct_upload.py
+python tests/unit/test_spaces_connection.py
+python tests/unit/test_upload_avatar.py
+python tests/unit/test_upload_post.py
+```
+
+Optional path overrides used by unit tests:
+
+```bash
+# pytest files that import app modules
+# uses BACKEND_PATH when set, otherwise current directory
+BACKEND_PATH=/absolute/path/to/backend pytest tests/unit/test_email_service.py -v
+
+# script files that load env config
+# uses DOTENV_PATH when set, otherwise current directory .env
+DOTENV_PATH=/absolute/path/to/.env python tests/unit/test_spaces_connection.py
+
+# direct upload script input image
+# uses TEST_FILE_PATH when set, otherwise current directory example.png
+TEST_FILE_PATH=/absolute/path/to/example.png python tests/unit/test_direct_upload.py
+```
+
 **What's tested:**
 - Email verification gating (register → must verify → then login)
 - Forgot password / reset password flow

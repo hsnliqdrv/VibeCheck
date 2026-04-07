@@ -1,20 +1,28 @@
 """
 Direct upload test - tests presigned URL directly without the test framework
+
+Usage (from backend directory):
+    python tests/unit/test_direct_upload.py
+
+Optional path overrides (otherwise current directory is used):
+    DOTENV_PATH=/absolute/path/to/.env python tests/unit/test_direct_upload.py
+    TEST_FILE_PATH=/absolute/path/to/example.png python tests/unit/test_direct_upload.py
 """
 import requests
 import os
 from pathlib import Path
 from dotenv import load_dotenv
 
-# Load .env
-load_dotenv(Path(__file__).parent.parent / '.env')
+# Load .env from explicit path when provided, otherwise current directory.
+dotenv_path = Path(os.getenv("DOTENV_PATH", Path.cwd() / ".env"))
+load_dotenv(dotenv_path)
 
 BASE_URL = "http://localhost:3000/api/v1"
 TEST_EMAIL = "directupload@example.com"
 TEST_PASSWORD = "TestPassword123"
 
-# Test file
-test_file = Path(__file__).parent / "example.png"
+# Test file path can be specified; defaults to current directory.
+test_file = Path(os.getenv("TEST_FILE_PATH", Path.cwd() / "example.png"))
 
 if not test_file.exists():
     print(f"ERROR: {test_file} not found")
