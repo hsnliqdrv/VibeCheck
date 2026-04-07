@@ -27,7 +27,7 @@ export default function ModeratorLogin() {
         window.dispatchEvent(new Event("auth-changed"));
 
         setMessage("Moderator access granted. Redirecting...");
-        navigate("/stories");
+        navigate("/moderator");
       } catch (_error) {
         setMessage("This moderator link is invalid or has expired.");
       }
