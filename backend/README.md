@@ -74,8 +74,9 @@ Python backend for the VibeCheck social platform — content curation, aura prof
 
 The backend generates its own API documentation from the actual implementation:
 
-- **Swagger UI**: http://localhost:3000/docs
-- **OpenAPI JSON Spec**: http://localhost:3000/apispec.json
+- **Swagger UI**: http://localhost:3000/docs/
+- **OpenAPI JSON Spec**: http://localhost:3000/apispec_1.json
+- **Compatibility alias**: http://localhost:3000/apispec.json
 
 This allows you to:
 1. See what the backend **actually implements** (not just what the spec says)

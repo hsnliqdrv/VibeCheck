@@ -1,4 +1,4 @@
-from flask import Flask, jsonify
+from flask import Flask, jsonify, redirect
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
 from flasgger import Swagger
@@ -44,15 +44,15 @@ def create_app():
         "headers": [],
         "specs": [
             {
-                "endpoint": 'apispec',
-                "route": '/apispec.json',
+                "endpoint": 'apispec_1',
+                "route": '/apispec_1.json',
                 "rule_filter": lambda rule: True,
                 "model_filter": lambda tag: True,
             }
         ],
         "static_url_path": "/flasgger_static",
         "swagger_ui": True,
-        "specs_route": "/docs"
+        "specs_route": "/docs/"
     }
     
     swagger_template = {
@@ -79,6 +79,11 @@ def create_app():
     }
     
     Swagger(app, config=swagger_config, template=swagger_template)
+
+    # Keep compatibility with existing docs links that expect /apispec.json.
+    @app.route('/apispec.json', methods=['GET'])
+    def apispec_legacy_alias():
+        return redirect('/apispec_1.json', code=302)
     
     # Initialize database
     init_db(app)
