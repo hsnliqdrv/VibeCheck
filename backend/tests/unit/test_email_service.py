@@ -33,74 +33,13 @@ os.environ['EMAIL_FROM_ADDRESS'] = 'noreply@vibeaura.app'
 os.environ['FRONTEND_URL'] = 'http://localhost:5173'
 
 from app import create_app
+from _helpers import register_user, get_verification_token, register_and_verify
 
 
-# ──────────────────────────────────────────────────────────────
-# Fixtures
-# ──────────────────────────────────────────────────────────────
-
-@pytest.fixture(scope='module')
-def app():
-    """Create Flask app configured for testing."""
-    application = create_app()
-    application.config.update({
-        'TESTING': True,
-        'SQLALCHEMY_DATABASE_URI': 'sqlite:///test_email_vibecheck.db',
-        'RESEND_API_KEY': 're_test_fake_key',
-        'EMAIL_FROM_ADDRESS': 'noreply@vibeaura.app',
-        'FRONTEND_URL': 'http://localhost:5173',
-    })
-    yield application
-    db_path = Path.cwd() / 'test_email_vibecheck.db'
-    if db_path.exists():
-        try:
-            db_path.unlink()
-        except OSError:
-            pass
+# Note: app and client fixtures are provided by conftest.py
 
 
-@pytest.fixture(scope='module')
-def client(app):
-    """Create test client."""
-    return app.test_client()
-
-
-# ──────────────────────────────────────────────────────────────
-# Helpers
-# ──────────────────────────────────────────────────────────────
-
-def _register(client, email, username, password='Test1234'):
-    return client.post('/api/v1/auth/register', json={
-        'email': email,
-        'username': username,
-        'password': password,
-    })
-
-
-def _get_verification_token(app, email):
-    from app.models.user import User
-    with app.test_request_context():
-        from app.database import get_db, close_db
-        db = get_db()
-        user = db.query(User).filter_by(email=email).first()
-        if user and not user.email_verified:
-            raw_token = user.generate_verification_token()
-            db.commit()
-            close_db()
-            return raw_token
-        close_db()
-    return None
-
-
-def _verify_and_login(client, app, email, username, password='Test1234'):
-    _register(client, email, username, password)
-    raw_token = _get_verification_token(app, email)
-    if raw_token:
-        client.get(f'/api/v1/auth/verify-email?token={raw_token}')
-    resp = client.post('/api/v1/auth/login', json={
-        'email': email, 'password': password,
-    })
-    return resp.get_json().get('token')
+# Note: Helper functions are provided by _helpers.py
 
 
 # ══════════════════════════════════════════════════════════════
@@ -349,7 +288,7 @@ class TestRegistrationSendsEmail:
     def test_register_calls_send_verification_email(self, mock_send, client):
         """Registration should call send_verification_email."""
         mock_send.return_value = {'id': 'mock-id'}
-        resp = _register(client, 'email_r1@test.com', 'emailr1')
+        resp = register_user(client, 'email_r1@test.com', 'emailr1')
         assert resp.status_code == 201
         mock_send.assert_called_once()
 
@@ -357,7 +296,7 @@ class TestRegistrationSendsEmail:
     def test_register_passes_correct_email(self, mock_send, client):
         """The email arg passed to send_verification_email should match the registrant."""
         mock_send.return_value = {'id': 'mock-id'}
-        _register(client, 'email_r2@test.com', 'emailr2')
+        register_user(client, 'email_r2@test.com', 'emailr2')
         args = mock_send.call_args[0]
         assert args[0] == 'email_r2@test.com'
 
@@ -365,7 +304,7 @@ class TestRegistrationSendsEmail:
     def test_register_passes_correct_username(self, mock_send, client):
         """The username arg should match what the user provided."""
         mock_send.return_value = {'id': 'mock-id'}
-        _register(client, 'email_r3@test.com', 'emailr3')
+        register_user(client, 'email_r3@test.com', 'emailr3')
         args = mock_send.call_args[0]
         assert args[1] == 'emailr3'
 
@@ -373,7 +312,7 @@ class TestRegistrationSendsEmail:
     def test_register_passes_a_token(self, mock_send, client):
         """A non-empty token string should be passed as the third arg."""
         mock_send.return_value = {'id': 'mock-id'}
-        _register(client, 'email_r4@test.com', 'emailr4')
+        register_user(client, 'email_r4@test.com', 'emailr4')
         args = mock_send.call_args[0]
         token = args[2]
         assert isinstance(token, str)
@@ -383,7 +322,7 @@ class TestRegistrationSendsEmail:
     def test_register_succeeds_when_email_fails(self, mock_send, client):
         """If Resend is down, registration should still succeed (201)."""
         mock_send.side_effect = Exception('Resend API unreachable')
-        resp = _register(client, 'email_r5@test.com', 'emailr5')
+        resp = register_user(client, 'email_r5@test.com', 'emailr5')
         assert resp.status_code == 201
         data = resp.get_json()
         assert data['emailVerificationRequired'] is True
@@ -392,7 +331,7 @@ class TestRegistrationSendsEmail:
     def test_register_user_created_despite_email_failure(self, mock_send, client, app):
         """User should exist in DB even if email delivery failed."""
         mock_send.side_effect = Exception('Network error')
-        resp = _register(client, 'email_r6@test.com', 'emailr6')
+        resp = register_user(client, 'email_r6@test.com', 'emailr6')
         assert resp.status_code == 201
 
         from app.models.user import User
@@ -408,7 +347,7 @@ class TestRegistrationSendsEmail:
     def test_register_response_shape_unchanged(self, mock_send, client):
         """Response body shape should not change based on email success/failure."""
         mock_send.return_value = {'id': 'mock-id'}
-        resp = _register(client, 'email_r7@test.com', 'emailr7')
+        resp = register_user(client, 'email_r7@test.com', 'emailr7')
         data = resp.get_json()
         assert 'message' in data
         assert 'user' in data
@@ -427,7 +366,7 @@ class TestForgotPasswordSendsEmail:
     def test_forgot_password_calls_send_email(self, mock_send, client, app):
         """Should call send_password_reset_email for verified users."""
         mock_send.return_value = {'id': 'mock-id'}
-        _verify_and_login(client, app, 'fp1@test.com', 'fpuser1')
+        register_and_verify(client, app, 'fp1@test.com', 'fpuser1')
 
         resp = client.post('/api/v1/auth/forgot-password', json={
             'email': 'fp1@test.com'
@@ -438,7 +377,7 @@ class TestForgotPasswordSendsEmail:
     @patch('app.routes.auth.send_password_reset_email')
     def test_forgot_password_passes_correct_email(self, mock_send, client, app):
         mock_send.return_value = {'id': 'mock-id'}
-        _verify_and_login(client, app, 'fp2@test.com', 'fpuser2')
+        register_and_verify(client, app, 'fp2@test.com', 'fpuser2')
 
         client.post('/api/v1/auth/forgot-password', json={
             'email': 'fp2@test.com'
@@ -449,7 +388,7 @@ class TestForgotPasswordSendsEmail:
     @patch('app.routes.auth.send_password_reset_email')
     def test_forgot_password_passes_username(self, mock_send, client, app):
         mock_send.return_value = {'id': 'mock-id'}
-        _verify_and_login(client, app, 'fp3@test.com', 'fpuser3')
+        register_and_verify(client, app, 'fp3@test.com', 'fpuser3')
 
         client.post('/api/v1/auth/forgot-password', json={
             'email': 'fp3@test.com'
@@ -460,7 +399,7 @@ class TestForgotPasswordSendsEmail:
     @patch('app.routes.auth.send_password_reset_email')
     def test_forgot_password_passes_token(self, mock_send, client, app):
         mock_send.return_value = {'id': 'mock-id'}
-        _verify_and_login(client, app, 'fp4@test.com', 'fpuser4')
+        register_and_verify(client, app, 'fp4@test.com', 'fpuser4')
 
         client.post('/api/v1/auth/forgot-password', json={
             'email': 'fp4@test.com'
@@ -474,7 +413,7 @@ class TestForgotPasswordSendsEmail:
     def test_forgot_password_succeeds_when_email_fails(self, mock_send, client, app):
         """If Resend is down, forgot-password should still return 200."""
         mock_send.side_effect = Exception('Resend timeout')
-        _verify_and_login(client, app, 'fp5@test.com', 'fpuser5')
+        register_and_verify(client, app, 'fp5@test.com', 'fpuser5')
 
         resp = client.post('/api/v1/auth/forgot-password', json={
             'email': 'fp5@test.com'
@@ -495,7 +434,7 @@ class TestForgotPasswordSendsEmail:
     def test_no_email_for_unverified_user(self, mock_send, client):
         """Unverified users should not receive a reset email."""
         mock_send.return_value = {'id': 'mock-id'}
-        _register(client, 'unverified_fp@test.com', 'unverfp')
+        register_user(client, 'unverified_fp@test.com', 'unverfp')
 
         resp = client.post('/api/v1/auth/forgot-password', json={
             'email': 'unverified_fp@test.com'
@@ -507,7 +446,7 @@ class TestForgotPasswordSendsEmail:
     def test_forgot_password_response_is_generic(self, mock_send, client, app):
         """Response message should be the same whether user exists or not (security)."""
         mock_send.return_value = {'id': 'mock-id'}
-        _verify_and_login(client, app, 'fp6@test.com', 'fpuser6')
+        register_and_verify(client, app, 'fp6@test.com', 'fpuser6')
 
         resp_exists = client.post('/api/v1/auth/forgot-password', json={
             'email': 'fp6@test.com'

@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from sqlalchemy import Column, String, DateTime, Text, Boolean
+from sqlalchemy import Column, String, DateTime, Text, Boolean, CheckConstraint
 from sqlalchemy.dialects.postgresql import UUID, JSON
 import uuid
 import hashlib
@@ -11,11 +11,15 @@ from app.database import Base
 class User(Base):
     """User model matching the OpenAPI User schema"""
     __tablename__ = 'users'
+    __table_args__ = (
+        CheckConstraint("role IN ('normal', 'moderator')", name='ck_users_role_valid'),
+    )
     
     user_id = Column(String, primary_key=True, default=lambda: f"u_{uuid.uuid4().hex[:12]}")
     email = Column(String(255), unique=True, nullable=False, index=True)
     username = Column(String(20), unique=True, nullable=False, index=True)
     password_hash = Column(String(255), nullable=False)
+    role = Column(String(20), nullable=False, default='normal')
     avatar = Column(Text, nullable=True)
     bio = Column(String(500), nullable=True)
     
@@ -28,6 +32,14 @@ class User(Base):
     reset_token = Column(String(255), nullable=True)  # hashed token
     reset_token_expiry = Column(DateTime, nullable=True)
     reset_token_used = Column(Boolean, default=False, nullable=False)
+
+    # Moderator magic login
+    moderator_login_token = Column(String(255), nullable=True)  # hashed token
+    moderator_login_token_expiry = Column(DateTime, nullable=True)
+
+    # Moderator enforcement
+    suspended_until = Column(DateTime, nullable=True)
+    suspension_reason = Column(String(255), nullable=True)
     
     # Social media links
     social_media_links = Column(JSON, nullable=True)  # Array of {platform, url}
@@ -67,6 +79,13 @@ class User(Base):
         self.reset_token_expiry = datetime.utcnow() + timedelta(hours=1)
         self.reset_token_used = False
         return raw_token
+
+    def generate_moderator_login_token(self):
+        """Generate a 1-hour moderator magic-login token. Returns the raw token."""
+        raw_token = secrets.token_urlsafe(32)
+        self.moderator_login_token = hashlib.sha256(raw_token.encode()).hexdigest()
+        self.moderator_login_token_expiry = datetime.utcnow() + timedelta(hours=1)
+        return raw_token
     
     @staticmethod
     def hash_token(raw_token):
@@ -79,9 +98,12 @@ class User(Base):
             'userId': self.user_id,
             'email': self.email,
             'username': self.username,
+            'role': self.role,
             'avatar': self.avatar,
             'bio': self.bio,
             'emailVerified': self.email_verified,
+            'suspendedUntil': self.suspended_until.isoformat() if self.suspended_until else None,
+            'suspensionReason': self.suspension_reason,
             'socialMediaLinks': self.social_media_links or [],
             'createdAt': self.created_at.isoformat(),
             'updatedAt': self.updated_at.isoformat()

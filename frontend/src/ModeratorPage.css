@@ -1,0 +1,90 @@
+.moderator-page {
+  padding: 2rem 6vw 4rem;
+}
+
+.moderator-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.moderator-header h1 {
+  margin: 0;
+  font-size: 1.8rem;
+}
+
+.moderator-empty {
+  background: rgba(255, 255, 255, 0.75);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 14px;
+  padding: 1rem;
+}
+
+.moderator-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 1rem;
+}
+
+.moderator-card {
+  background: rgba(255, 255, 255, 0.88);
+  border-radius: 16px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.08);
+  padding: 1rem;
+  display: grid;
+  gap: 0.9rem;
+}
+
+.moderator-card__top p {
+  margin: 0.2rem 0;
+  font-size: 0.9rem;
+}
+
+.moderator-preview {
+  width: 100%;
+  max-height: 220px;
+  object-fit: cover;
+  border-radius: 12px;
+}
+
+.moderator-actions {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.moderator-actions label {
+  display: grid;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+  color: rgba(29, 27, 34, 0.8);
+}
+
+.moderator-actions input {
+  border: 1px solid rgba(29, 27, 34, 0.2);
+  border-radius: 10px;
+  padding: 0.55rem 0.65rem;
+}
+
+.moderator-actions__buttons {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.moderator-danger {
+  border: none;
+  border-radius: 14px;
+  padding: 0.75rem 1rem;
+  background: linear-gradient(135deg, #7a0f0f, #d62828);
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.moderator-danger:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}

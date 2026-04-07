@@ -19,7 +19,7 @@ def init_db(app):
     
     # Import all models to ensure they're registered
     # NOTE: badge.py is legacy – gamification.py already defines the Badge table
-    from app.models import user, content, share, post, gamification, room
+    from app.models import user, content, share, post, gamification, room, report
     
     # In development mode, drop all tables and recreate them
     if app.config.get('FLASK_ENV', 'development') == 'development':

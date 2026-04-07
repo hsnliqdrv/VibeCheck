@@ -1,3 +1,4 @@
+from datetime import datetime
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity, verify_jwt_in_request, get_jwt
 from sqlalchemy import desc
@@ -5,6 +6,7 @@ from app.database import get_db
 from app.models.user import User
 from app.models.post import Post, Comment, PostLike
 from app.models.room import AestheticRoom, RoomMember
+from app.models.report import RoomPostReport
 from app.services.badge_service import BadgeService
 
 social_bp = Blueprint('social', __name__)
@@ -17,6 +19,17 @@ def _get_optional_user_id():
         return get_jwt_identity()
     except Exception:
         return None
+
+
+def _get_suspension_error(user):
+    if user is not None and bool(user.suspended_until) and user.suspended_until > datetime.utcnow():
+        return jsonify({
+            'error': 'Forbidden',
+            'message': 'Your account is suspended',
+            'suspendedUntil': user.suspended_until.isoformat(),
+            'reason': user.suspension_reason,
+        }), 403
+    return None
 
 
 # ──────────────────────────────────────────────
@@ -158,6 +171,11 @@ def create_community_post():
     try:
         current_user_id = get_jwt_identity()
         db = get_db()
+
+        current_user = db.query(User).filter_by(user_id=current_user_id).first()
+        suspension_error = _get_suspension_error(current_user)
+        if suspension_error:
+          return suspension_error
         
         data = request.get_json()
         
@@ -1011,6 +1029,11 @@ def create_room_post(room_id):
         current_user_id = get_jwt_identity()
         db = get_db()
 
+        current_user = db.query(User).filter_by(user_id=current_user_id).first()
+        suspension_error = _get_suspension_error(current_user)
+        if suspension_error:
+          return suspension_error
+
         room = db.query(AestheticRoom).filter_by(id=room_id).first()
         if not room:
             return jsonify({'error': 'Not Found', 'message': 'Room not found'}), 404
@@ -1084,6 +1107,96 @@ def create_room_post(room_id):
             print(f"Aura inference error: {aura_error}")
 
         return jsonify({'message': 'Post created successfully', 'post': post.to_dict()}), 201
+
+    except Exception as e:
+        if db is not None:
+            try:
+                db.rollback()
+            except Exception:
+                pass
+        return jsonify({'error': 'Internal Server Error', 'message': str(e)}), 500
+
+
+@social_bp.route('/rooms/<string:room_id>/posts/<string:post_id>/report', methods=['POST'])
+@jwt_required()
+def report_room_post(room_id, post_id):
+    """
+    Report a post inside a specific room
+    ---
+    tags:
+      - Social
+    security:
+      - Bearer: []
+    parameters:
+      - name: room_id
+        in: path
+        type: string
+        required: true
+      - name: post_id
+        in: path
+        type: string
+        required: true
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          required:
+            - reason
+          properties:
+            reason:
+              type: string
+              maxLength: 500
+    responses:
+      201:
+        description: Report created
+      400:
+        description: Bad request
+      401:
+        description: Unauthorized
+      404:
+        description: Room or post not found
+    """
+    db = None
+    try:
+        current_user_id = get_jwt_identity()
+        db = get_db()
+
+        current_user = db.query(User).filter_by(user_id=current_user_id).first()
+        suspension_error = _get_suspension_error(current_user)
+        if suspension_error:
+          return suspension_error
+
+        room = db.query(AestheticRoom).filter_by(id=room_id).first()
+        if not room:
+            return jsonify({'error': 'Not Found', 'message': 'Room not found'}), 404
+
+        post = db.query(Post).filter_by(id=post_id, room_id=room_id).first()
+        if not post:
+            return jsonify({'error': 'Not Found', 'message': 'Post not found in this room'}), 404
+
+        data = request.get_json() or {}
+        reason = (data.get('reason') or '').strip()
+        if not reason:
+            return jsonify({'error': 'Bad Request', 'message': 'Field "reason" is required'}), 400
+        if len(reason) > 500:
+            return jsonify({'error': 'Bad Request', 'message': 'Reason must be 500 characters or less'}), 400
+
+        report = RoomPostReport(
+            room_id=room_id,
+            post_id=post_id,
+            reporter_id=current_user_id,
+            post_owner_id=post.user_id,
+            reason=reason,
+        )
+        db.add(report)
+        db.commit()
+        db.refresh(report)
+
+        return jsonify({
+            'message': 'Report submitted successfully',
+            'report': report.to_dict(),
+        }), 201
 
     except Exception as e:
         if db is not None:

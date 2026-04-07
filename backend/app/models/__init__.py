@@ -7,8 +7,9 @@ from app.models.share import Share
 
 from app.models.gamification import Badge, UserBadge, CuratorLevel, UserCuratorStats
 from app.models.room import AestheticRoom, RoomMember
+from app.models.report import RoomPostReport
 __all__ = [
     'User', 'Movie', 'Album', 'Game', 'Book', 'Location', 'MovieType',
     'GameDifficulty', 'Share', 'Badge', 'UserBadge', 'CuratorLevel',
-    'UserCuratorStats', 'AestheticRoom', 'RoomMember',
+    'UserCuratorStats', 'AestheticRoom', 'RoomMember', 'RoomPostReport',
 ]

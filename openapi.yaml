@@ -80,10 +80,55 @@ paths:
                   userId: "u_123"
                   email: user@example.com
                   username: aesthetic_anna
+                  role: normal
         '401':
           $ref: '#/components/responses/UnauthorizedError'
         '403':
           description: Email not verified. Please verify your email before logging in.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /auth/moderator-login/{token}:
+    get:
+      tags:
+        - User Profile
+      summary: Moderator magic-link login
+      description: |
+        Exchanges a moderator magic-link token for a normal JWT session.
+        The token is single-use and expires after 1 hour.
+      operationId: moderatorLogin
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Moderator magic-link token from /mod/{token}
+      responses:
+        '200':
+          description: Moderator login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                  user:
+                    $ref: '#/components/schemas/User'
+              example:
+                token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
+                user:
+                  userId: "u_mod123"
+                  email: moderator@example.com
+                  username: mod_anna
+                  role: moderator
+        '401':
+          description: Invalid or expired moderator link
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '400':
           $ref: '#/components/responses/BadRequest'
 
@@ -1522,6 +1567,59 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /social/rooms/{roomId}/posts/{postId}/report:
+    post:
+      tags:
+        - Social
+      summary: Report a post inside a room
+      operationId: reportRoomPost
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: roomId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: postId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - reason
+              properties:
+                reason:
+                  type: string
+                  maxLength: 500
+                  description: The report reason, either selected from the UI or entered manually
+            example:
+              reason: "Spam or self-promotion"
+      responses:
+        '201':
+          description: Report submitted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  report:
+                    $ref: '#/components/schemas/PostReport'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /social/rooms/{roomId}/join:
     post:
       tags:
@@ -1677,6 +1775,7 @@ components:
         - userId
         - email
         - username
+        - role
       properties:
         userId:
           type: string
@@ -1685,6 +1784,10 @@ components:
           format: email
         username:
           type: string
+        role:
+          type: string
+          enum: [normal, moderator]
+          description: Authorization role of the user account
         avatar:
           type: string
           format: uri
@@ -2191,6 +2294,32 @@ components:
           format: date-time
         likes:
           type: integer
+
+    PostReport:
+      type: object
+      required:
+        - id
+        - roomId
+        - postId
+        - reporterId
+        - ownerId
+        - reason
+      properties:
+        id:
+          type: string
+        roomId:
+          type: string
+        postId:
+          type: string
+        reporterId:
+          type: string
+        ownerId:
+          type: string
+        reason:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
 
   parameters:
     Limit:

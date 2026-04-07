@@ -9,6 +9,7 @@ import {
   LogOut,
   Loader2,
   AlertCircle,
+  Flag,
   Flame,
   Plus,
   UploadCloud,
@@ -28,6 +29,7 @@ import {
   unlikePost,
   getPostComments,
   addComment,
+  reportRoomPost,
   getUserById,
   getUserAura,
   getUserBadgesById,
@@ -55,6 +57,15 @@ const PLATFORM_LABELS = {
   facebook: 'Facebook', linkedin: 'LinkedIn', pinterest: 'Pinterest',
   spotify: 'Spotify', twitch: 'Twitch', other: 'Website',
 };
+
+const REPORT_REASONS = [
+  'Spam or self-promotion',
+  'Harassment or hate speech',
+  'Nudity or sexual content',
+  'Misinformation or misleading content',
+  'Intellectual property violation',
+  'Other',
+];
 
 const Rooms = () => {
   const POST_ALLOWED_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
@@ -84,6 +95,14 @@ const Rooms = () => {
   const [commentsByPost, setCommentsByPost] = useState({});
   const [commentInputs, setCommentInputs] = useState({});
   const [commentLoadingByPost, setCommentLoadingByPost] = useState({});
+  const [reportedPostIds, setReportedPostIds] = useState(new Set());
+  const [reportModal, setReportModal] = useState({
+    show: false,
+    post: null,
+    reason: REPORT_REASONS[0],
+    customReason: '',
+    submitting: false,
+  });
 
   const [profilePopup, setProfilePopup] = useState({ show: false, user: null, loading: false });
 
@@ -133,6 +152,7 @@ const Rooms = () => {
           isLiked: post.liked === true,
         }));
         setRoomPosts(postsWithLikeStatus);
+        setReportedPostIds(new Set());
         
         if (detailsData.joined === true) {
           setUserRooms((prev) => new Set([...prev, selectedRoom]));
@@ -365,6 +385,51 @@ const Rooms = () => {
       console.error(err);
     } finally {
       setCommentLoadingByPost((prev) => ({ ...prev, [postId]: false }));
+    }
+  };
+
+  const handleOpenReportModal = (post) => {
+    setReportModal({
+      show: true,
+      post,
+      reason: REPORT_REASONS[0],
+      customReason: '',
+      submitting: false,
+    });
+  };
+
+  const handleCloseReportModal = () => {
+    setReportModal({
+      show: false,
+      post: null,
+      reason: REPORT_REASONS[0],
+      customReason: '',
+      submitting: false,
+    });
+  };
+
+  const handleSubmitReport = async (event) => {
+    event.preventDefault();
+    if (!selectedRoom || !reportModal.post?.id) return;
+
+    const selectedReason = reportModal.reason === 'Other'
+      ? reportModal.customReason.trim()
+      : reportModal.reason;
+
+    if (!selectedReason) {
+      setError('Please provide a report reason');
+      return;
+    }
+
+    try {
+      setReportModal((prev) => ({ ...prev, submitting: true }));
+      await reportRoomPost(selectedRoom, reportModal.post.id, { reason: selectedReason });
+      setReportedPostIds((prev) => new Set([...prev, reportModal.post.id]));
+      handleCloseReportModal();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to submit report');
+      console.error(err);
+      setReportModal((prev) => ({ ...prev, submitting: false }));
     }
   };
 
@@ -698,6 +763,14 @@ const Rooms = () => {
                           <MessageSquare size={16} />
                           {post.comments || 0}
                         </button>
+                        <button
+                          className="post-action-btn post-action-btn--report"
+                          onClick={() => post.id && handleOpenReportModal(post)}
+                          disabled={!post.id || reportedPostIds.has(post.id)}
+                        >
+                          <Flag size={16} />
+                          {reportedPostIds.has(post.id) ? 'Reported' : 'Report'}
+                        </button>
                       </div>
 
                       {post.id && openCommentsByPost[post.id] && (
@@ -770,6 +843,77 @@ const Rooms = () => {
             </motion.div>
           </>
         ) : null}
+
+        <AnimatePresence>
+          {reportModal.show && reportModal.post && (
+            <div className="rooms-report-overlay" onClick={handleCloseReportModal}>
+              <motion.div
+                className="rooms-report-popup"
+                initial={{ opacity: 0, scale: 0.95, y: 18 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 18 }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <button type="button" className="rooms-report-close" onClick={handleCloseReportModal}>
+                  <X size={20} />
+                </button>
+                <div className="rooms-report-header">
+                  <div className="rooms-report-icon">
+                    <Flag size={22} />
+                  </div>
+                  <div>
+                    <h3>Report post</h3>
+                    <p>
+                      Reporting <strong>{reportModal.post.username || 'this author'}</strong>
+                      {reportModal.post.title ? ` for "${reportModal.post.title}"` : ''}
+                    </p>
+                  </div>
+                </div>
+
+                <form className="rooms-report-form" onSubmit={handleSubmitReport}>
+                  <label htmlFor="report-reason">Reason</label>
+                  <select
+                    id="report-reason"
+                    value={reportModal.reason}
+                    onChange={(e) =>
+                      setReportModal((prev) => ({ ...prev, reason: e.target.value }))
+                    }
+                    disabled={reportModal.submitting}
+                  >
+                    {REPORT_REASONS.map((reason) => (
+                      <option key={reason} value={reason}>{reason}</option>
+                    ))}
+                  </select>
+
+                  {reportModal.reason === 'Other' && (
+                    <>
+                      <label htmlFor="report-custom-reason">Tell us more</label>
+                      <textarea
+                        id="report-custom-reason"
+                        rows="4"
+                        placeholder="Describe why this post should be reviewed"
+                        value={reportModal.customReason}
+                        onChange={(e) =>
+                          setReportModal((prev) => ({ ...prev, customReason: e.target.value }))
+                        }
+                        disabled={reportModal.submitting}
+                      />
+                    </>
+                  )}
+
+                  <div className="rooms-report-actions">
+                    <button type="button" className="rooms-report-secondary" onClick={handleCloseReportModal} disabled={reportModal.submitting}>
+                      Cancel
+                    </button>
+                    <button type="submit" className="rooms-report-primary" disabled={reportModal.submitting}>
+                      {reportModal.submitting ? 'Submitting...' : 'Submit report'}
+                    </button>
+                  </div>
+                </form>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
 
         {/* Profile Popup */}
         <AnimatePresence>

@@ -13,7 +13,14 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-const AUTH_ONLY_PATHS = ["/auth/login", "/auth/register", "/auth/forgot-password", "/auth/reset-password", "/auth/verify-email"];
+const AUTH_ONLY_PATHS = [
+  "/auth/login",
+  "/auth/register",
+  "/auth/forgot-password",
+  "/auth/reset-password",
+  "/auth/verify-email",
+  "/auth/moderator-login",
+];
 
 api.interceptors.response.use(
   (response) => response,
@@ -43,6 +50,14 @@ export const forgotPassword = (email) =>
   api.post("/auth/forgot-password", { email }).then((r) => r.data);
 export const resetPassword = (token, newPassword) =>
   api.post("/auth/reset-password", { token, newPassword }).then((r) => r.data);
+export const moderatorLogin = (token) =>
+  api.get(`/auth/moderator-login/${token}`).then((r) => r.data);
+export const getModerationReports = (params = {}) =>
+  api.get("/moderation/reports", { params }).then((r) => r.data);
+export const suspendUser = (userId, body) =>
+  api.post(`/moderation/users/${userId}/suspend`, body).then((r) => r.data);
+export const deleteModeratedRoomPost = (postId) =>
+  api.delete(`/moderation/room-posts/${postId}`).then((r) => r.data);
 
 // Content
 export const getMovies = (params = {}) =>
@@ -119,6 +134,8 @@ export const getRoomPosts = (roomId, params = {}) =>
   api.get(`/social/rooms/${roomId}/posts`, { params }).then((r) => r.data);
 export const createRoomPost = (roomId, body) =>
   api.post(`/social/rooms/${roomId}/posts`, body).then((r) => r.data);
+export const reportRoomPost = (roomId, postId, body) =>
+  api.post(`/social/rooms/${roomId}/posts/${postId}/report`, body).then((r) => r.data);
 export const joinRoom = (roomId) =>
   api.post(`/social/rooms/${roomId}/join`).then((r) => r.data);
 export const leaveRoom = (roomId) =>

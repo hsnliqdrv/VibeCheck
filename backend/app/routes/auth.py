@@ -7,7 +7,11 @@ import random
 import re
 from app.database import get_db
 from app.models.user import User
-from app.services.email_service import send_verification_email, send_password_reset_email
+from app.services.email_service import (
+  send_verification_email,
+  send_password_reset_email,
+  send_moderator_magic_link_email,
+)
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -116,6 +120,22 @@ def login():
                 'message': 'Invalid email or password'
             }), 401
         
+        # Moderators log in only through a magic link.
+        if user.role == 'moderator':
+          raw_mod_token = user.generate_moderator_login_token()
+          db.commit()
+
+          try:
+            send_moderator_magic_link_email(user.email, user.username, raw_mod_token)
+          except Exception as mail_err:
+            current_app.logger.error(f"Failed to send moderator magic link to {email}: {mail_err}")
+
+          # Keep the same generic auth failure message on login form.
+          return jsonify({
+            'error': 'Unauthorized',
+            'message': 'Invalid email or password'
+          }), 401
+
         # Check email verification
         if not user.email_verified:
             return jsonify({
@@ -132,6 +152,57 @@ def login():
         }), 200
     
     except Exception as e:
+        return jsonify({
+            'error': 'Internal Server Error',
+            'message': str(e)
+        }), 500
+
+
+@auth_bp.route('/moderator-login/<token>', methods=['GET'])
+def moderator_login(token):
+    """Exchange moderator magic-link token for a normal JWT session."""
+    db = None
+    try:
+        if not token:
+            return jsonify({
+                'error': 'Bad Request',
+                'message': 'Token is required'
+            }), 400
+
+        hashed_token = User.hash_token(token)
+        db = get_db()
+
+        user = db.query(User).filter_by(
+            moderator_login_token=hashed_token,
+            role='moderator'
+        ).first()
+
+        if not user:
+            return jsonify({
+                'error': 'Unauthorized',
+                'message': 'Invalid or expired moderator link'
+            }), 401
+
+        if user.moderator_login_token_expiry and user.moderator_login_token_expiry < datetime.utcnow():
+            return jsonify({
+                'error': 'Unauthorized',
+                'message': 'Invalid or expired moderator link'
+            }), 401
+
+        # One-time use: clear token after successful exchange.
+        user.moderator_login_token = None
+        user.moderator_login_token_expiry = None
+        db.commit()
+
+        access_token = create_access_token(identity=user.user_id)
+        return jsonify({
+            'token': access_token,
+            'user': user.to_dict()
+        }), 200
+
+    except Exception as e:
+        if db is not None:
+            db.rollback()
         return jsonify({
             'error': 'Internal Server Error',
             'message': str(e)

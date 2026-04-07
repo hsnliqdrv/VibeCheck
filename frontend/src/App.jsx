@@ -5,6 +5,8 @@ import Register from "./Register";
 import VerifyEmail from "./VerifyEmail";
 import ForgotPassword from "./ForgotPassword";
 import ResetPassword from "./ResetPassword";
+import ModeratorLogin from "./ModeratorLogin";
+import ModeratorPage from "./ModeratorPage";
 import Profile from "./Profile";
 import { StoryGenerator } from "./components/stories";
 import BadgesPage from "./badges/Badges";
@@ -29,11 +31,25 @@ function UnauthorizedPopup({ visible, onClose }) {
 
 function AppShell() {
   const [isAuthed, setIsAuthed] = useState(() => Boolean(localStorage.getItem("token")));
+  const [isModerator, setIsModerator] = useState(() => {
+    try {
+      const user = JSON.parse(localStorage.getItem("user") || "null");
+      return user?.role === "moderator";
+    } catch {
+      return false;
+    }
+  });
   const [showUnauthorized, setShowUnauthorized] = useState(false);
   const navigate = useNavigate();
 
   const syncAuthState = useCallback(() => {
     setIsAuthed(Boolean(localStorage.getItem("token")));
+    try {
+      const user = JSON.parse(localStorage.getItem("user") || "null");
+      setIsModerator(user?.role === "moderator");
+    } catch {
+      setIsModerator(false);
+    }
   }, []);
 
   const hadTokenRef = useRef(Boolean(localStorage.getItem("token")));
@@ -105,6 +121,7 @@ function AppShell() {
           {isAuthed && <Link to="/rooms">Rooms</Link>}
           {isAuthed && <Link to="/badges">Badges</Link>}
           {isAuthed && <Link to="/profile">Profile</Link>}
+          {isAuthed && isModerator && <Link to="/moderator">Moderation</Link>}
           {isAuthed && (
             <button type="button" className="nav-link-button" onClick={handleLogout}>
               Logout
@@ -119,6 +136,8 @@ function AppShell() {
         <Route path="/verify-email" element={<VerifyEmail />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/mod/:token" element={<ModeratorLogin />} />
+        <Route path="/moderator" element={<ModeratorPage />} />
         <Route path="/stories" element={<StoryGenerator />} />
         <Route path="/discover" element={<DiscoverPage />} />
         <Route path="/rooms" element={<Rooms />} />
