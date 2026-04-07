@@ -1,4 +1,5 @@
 from sqlalchemy import create_engine
+from sqlalchemy.schema import DropTable
 from sqlalchemy.orm import scoped_session, sessionmaker, declarative_base
 from flask import g
 
@@ -23,7 +24,7 @@ def init_db(app):
     
     # In development mode, drop all tables and recreate them
     if app.config.get('FLASK_ENV', 'development') == 'development':
-        Base.metadata.drop_all(engine)
+        _drop_all_tables(engine)
         print("Development mode: Dropped all tables")
     
     # Create all tables
@@ -40,6 +41,16 @@ def init_db(app):
         seed_startup_content(db, items_per_category=5)
     finally:
         db.close()
+
+
+def _drop_all_tables(db_engine):
+    """Drop all tables, using CASCADE on PostgreSQL so dependent objects are removed too."""
+    if db_engine.dialect.name == 'postgresql':
+        with db_engine.begin() as connection:
+            for table in reversed(Base.metadata.sorted_tables):
+                connection.execute(DropTable(table, if_exists=True, cascade=True))
+    else:
+        Base.metadata.drop_all(db_engine)
 
 
 def get_db():
