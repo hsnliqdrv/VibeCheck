@@ -115,7 +115,11 @@ const MatchCard = React.memo(({ match, itemVariants, onOpenProfile }) => {
                 <div className="ds-user">
                     <div className="ds-avatar-wrap">
                         <img
-                            src={getAvatarUrl(user.avatar, user.updatedAt)}
+                            src={user.avatar ? getAvatarUrl(user.avatar, user.updatedAt) : `https://ui-avatars.com/api/?background=6b6bf8&color=fff&name=${encodeURIComponent(user.username)}`}
+                            onError={(e) => {
+                                e.target.onerror = null;
+                                e.target.src = `https://ui-avatars.com/api/?background=6b6bf8&color=fff&name=${encodeURIComponent(user.username)}`;
+                            }}
                             alt={user.username}
                             className="ds-avatar"
                         />
@@ -519,7 +523,11 @@ const DiscoverPage = () => {
                                     <div className="ds-profile-header">
                                         {profilePopup.user.avatar && (
                                             <img
-                                                src={getAvatarUrl(profilePopup.user.avatar, profilePopup.user.updatedAt)}
+                                                src={profilePopup.user.avatar ? getAvatarUrl(profilePopup.user.avatar, profilePopup.user.updatedAt) : `https://ui-avatars.com/api/?background=6b6bf8&color=fff&name=${encodeURIComponent(profilePopup.user.username)}`}
+                                                onError={(e) => {
+                                                    e.target.onerror = null;
+                                                    e.target.src = `https://ui-avatars.com/api/?background=6b6bf8&color=fff&name=${encodeURIComponent(profilePopup.user.username)}`;
+                                                }}
                                                 alt={profilePopup.user.username}
                                                 className="ds-profile-avatar"
                                             />
