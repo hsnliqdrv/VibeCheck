@@ -1,5 +1,4 @@
-from sqlalchemy import create_engine
-from sqlalchemy.schema import DropTable
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import scoped_session, sessionmaker, declarative_base
 from flask import g
 
@@ -48,7 +47,8 @@ def _drop_all_tables(db_engine):
     if db_engine.dialect.name == 'postgresql':
         with db_engine.begin() as connection:
             for table in reversed(Base.metadata.sorted_tables):
-                connection.execute(DropTable(table, if_exists=True, cascade=True))
+                qualified_name = db_engine.dialect.identifier_preparer.format_table(table)
+                connection.execute(text(f'DROP TABLE IF EXISTS {qualified_name} CASCADE'))
     else:
         Base.metadata.drop_all(db_engine)
 
