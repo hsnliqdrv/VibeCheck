@@ -29,6 +29,8 @@ import {
   getPostComments,
   addComment,
   getUserById,
+  getUserAura,
+  getUserBadgesById,
   getPostUploadUrl,
   uploadToPresignedUrl,
 } from '../services/api';
@@ -369,13 +371,23 @@ const Rooms = () => {
   const handleUsernameClick = async (post) => {
     const userId = post.userId || post.user_id;
     if (!userId) return;
-    setProfilePopup({ show: true, user: null, loading: true });
+    setProfilePopup({ show: true, user: null, aura: null, badges: null, loading: true });
     try {
-      const userData = await getUserById(userId);
-      setProfilePopup({ show: true, user: userData, loading: false });
+      const [userData, auraData, badgesData] = await Promise.allSettled([
+        getUserById(userId),
+        getUserAura(userId),
+        getUserBadgesById(userId),
+      ]);
+      setProfilePopup({
+        show: true,
+        user: userData.status === 'fulfilled' ? userData.value : null,
+        aura: auraData.status === 'fulfilled' ? auraData.value : null,
+        badges: badgesData.status === 'fulfilled' ? (badgesData.value?.data || badgesData.value || []) : [],
+        loading: false,
+      });
     } catch (err) {
       console.error('Failed to load user profile:', err);
-      setProfilePopup({ show: false, user: null, loading: false });
+      setProfilePopup({ show: false, user: null, aura: null, badges: null, loading: false });
       setError('Failed to load user profile');
     }
   };
@@ -764,7 +776,7 @@ const Rooms = () => {
           {profilePopup.show && (
             <div
               className="rooms-profile-overlay"
-              onClick={() => setProfilePopup({ show: false, user: null, loading: false })}
+              onClick={() => setProfilePopup({ show: false, user: null, aura: null, badges: null, loading: false })}
             >
               <motion.div
                 className="rooms-profile-popup"
@@ -775,7 +787,7 @@ const Rooms = () => {
               >
                 <button
                   className="rooms-profile-close"
-                  onClick={() => setProfilePopup({ show: false, user: null, loading: false })}
+                  onClick={() => setProfilePopup({ show: false, user: null, aura: null, badges: null, loading: false })}
                 >
                   <X size={20} />
                 </button>
@@ -786,18 +798,105 @@ const Rooms = () => {
                   </div>
                 ) : profilePopup.user ? (
                   <div className="rooms-profile-body">
-                    {profilePopup.user.avatar && (
-                      <img
-                        src={getAvatarUrl(profilePopup.user.avatar, profilePopup.user.updatedAt)}
-                        alt={profilePopup.user.username}
-                        className="rooms-profile-avatar"
-                      />
+                    {/* Header */}
+                    <div className="rooms-profile-header">
+                      {profilePopup.user.avatar && (
+                        <img
+                          src={getAvatarUrl(profilePopup.user.avatar, profilePopup.user.updatedAt)}
+                          alt={profilePopup.user.username}
+                          className="rooms-profile-avatar"
+                        />
+                      )}
+                      <h3>{profilePopup.user.username}</h3>
+                      {profilePopup.user.bio && <p className="rooms-profile-bio">{profilePopup.user.bio}</p>}
+                      {profilePopup.user.createdAt && (
+                        <p className="rooms-profile-joined">Member since {new Date(profilePopup.user.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'long' })}</p>
+                      )}
+                    </div>
+
+                    {/* Aesthetic Tags */}
+                    {profilePopup.aura?.aestheticTags?.length > 0 && (
+                      <div className="rooms-profile-section">
+                        <label>AESTHETIC MARKERS</label>
+                        <div className="rooms-profile-tags">
+                          {profilePopup.aura.aestheticTags.map(tag => (
+                            <span key={tag} className="rooms-profile-tag">{tag}</span>
+                          ))}
+                        </div>
+                      </div>
                     )}
-                    <h3>{profilePopup.user.username}</h3>
-                    {profilePopup.user.bio && <p className="rooms-profile-bio">{profilePopup.user.bio}</p>}
+
+                    {/* Aura Colors */}
+                    {profilePopup.aura?.auraColors?.length > 0 && (
+                      <div className="rooms-profile-section">
+                        <label>VIBE SIGNATURE</label>
+                        <div className="rooms-profile-aura">
+                          {profilePopup.aura.auraColors.map((color, i) => (
+                            <div
+                              key={i}
+                              className="rooms-profile-aura-dot"
+                              style={{ backgroundColor: color }}
+                              title={color}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Top Categories */}
+                    {profilePopup.aura?.topCategories?.length > 0 && (
+                      <div className="rooms-profile-section">
+                        <label>CONTENT DISTRIBUTION</label>
+                        <div className="rooms-profile-categories">
+                          {profilePopup.aura.topCategories.map(cat => (
+                            <div key={cat.category} className="rooms-profile-cat-row">
+                              <span className="rooms-profile-cat-name">{cat.category}</span>
+                              <div className="rooms-profile-cat-bar">
+                                <div className="rooms-profile-cat-fill" style={{ width: `${cat.percentage}%` }} />
+                              </div>
+                              <span className="rooms-profile-cat-pct">{cat.percentage}%</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Recent Shares */}
+                    {profilePopup.aura?.recentShares?.length > 0 && (
+                      <div className="rooms-profile-section">
+                        <label>RECENT CURATIONS</label>
+                        <div className="rooms-profile-shares">
+                          {profilePopup.aura.recentShares.slice(0, 6).map((share, i) => (
+                            <div key={share.id || i} className="rooms-profile-share">
+                              {share.image && <img src={share.image} alt={share.title || 'Share'} />}
+                              <span className="rooms-profile-share-title">{share.title}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Badges */}
+                    {Array.isArray(profilePopup.badges) && profilePopup.badges.length > 0 && (
+                      <div className="rooms-profile-section">
+                        <label>BADGES</label>
+                        <div className="rooms-profile-badges">
+                          {profilePopup.badges.filter(b => b.unlocked).slice(0, 8).map(badge => (
+                            <div key={badge.id} className="rooms-profile-badge" title={badge.description || badge.name}>
+                              <span className="rooms-profile-badge-name">{badge.name}</span>
+                              <span className={`rooms-profile-badge-rarity rooms-profile-badge-rarity--${(badge.rarity || '').toLowerCase()}`}>{badge.rarity}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Social Media Links */}
                     {profilePopup.user.socialMediaLinks?.length > 0 && (
-                      <div className="rooms-profile-socials">
-                        {profilePopup.user.socialMediaLinks.map((link, i) => {
+                      <div className="rooms-profile-section">
+                        <label>SOCIAL PROFILES</label>
+                        <div className="rooms-profile-socials">
+                          {profilePopup.user.socialMediaLinks.map((link, i) => {
                             const platform = (link.platform || 'other').toLowerCase();
                             return (
                               <a
@@ -812,6 +911,7 @@ const Rooms = () => {
                               </a>
                             );
                           })}
+                        </div>
                       </div>
                     )}
                   </div>

@@ -6,7 +6,7 @@ import {
     ChevronDown, ChevronUp, X, RefreshCw,
     ExternalLink, User
 } from 'lucide-react';
-import { getAuraMatches, getUserById } from '../services/api';
+import { getAuraMatches, getUserById, getUserAura, getUserBadgesById } from '../services/api';
 import { getAvatarUrl } from '../utils/avatarUrl';
 import './Discover.css';
 
@@ -248,13 +248,23 @@ const DiscoverPage = () => {
 
     const handleOpenProfile = async (userId) => {
         if (!userId) return;
-        setProfilePopup({ show: true, user: null, loading: true });
+        setProfilePopup({ show: true, user: null, aura: null, badges: null, loading: true });
         try {
-            const userData = await getUserById(userId);
-            setProfilePopup({ show: true, user: userData, loading: false });
+            const [userData, auraData, badgesData] = await Promise.allSettled([
+                getUserById(userId),
+                getUserAura(userId),
+                getUserBadgesById(userId),
+            ]);
+            setProfilePopup({
+                show: true,
+                user: userData.status === 'fulfilled' ? userData.value : null,
+                aura: auraData.status === 'fulfilled' ? auraData.value : null,
+                badges: badgesData.status === 'fulfilled' ? (badgesData.value?.data || badgesData.value || []) : [],
+                loading: false,
+            });
         } catch (err) {
             console.error('Failed to load user profile:', err);
-            setProfilePopup({ show: false, user: null, loading: false });
+            setProfilePopup({ show: false, user: null, aura: null, badges: null, loading: false });
             setError('Failed to load user profile');
         }
     };
@@ -483,7 +493,7 @@ const DiscoverPage = () => {
                 {profilePopup.show && (
                     <div
                         className="ds-profile-overlay"
-                        onClick={() => setProfilePopup({ show: false, user: null, loading: false })}
+                        onClick={() => setProfilePopup({ show: false, user: null, aura: null, badges: null, loading: false })}
                     >
                         <motion.div
                             className="ds-profile-popup"
@@ -494,7 +504,7 @@ const DiscoverPage = () => {
                         >
                             <button
                                 className="ds-profile-close"
-                                onClick={() => setProfilePopup({ show: false, user: null, loading: false })}
+                                onClick={() => setProfilePopup({ show: false, user: null, aura: null, badges: null, loading: false })}
                             >
                                 <X size={20} />
                             </button>
@@ -505,32 +515,120 @@ const DiscoverPage = () => {
                                 </div>
                             ) : profilePopup.user ? (
                                 <div className="ds-profile-body">
-                                    {profilePopup.user.avatar && (
-                                        <img
-                                            src={getAvatarUrl(profilePopup.user.avatar, profilePopup.user.updatedAt)}
-                                            alt={profilePopup.user.username}
-                                            className="ds-profile-avatar"
-                                        />
+                                    {/* Header */}
+                                    <div className="ds-profile-header">
+                                        {profilePopup.user.avatar && (
+                                            <img
+                                                src={getAvatarUrl(profilePopup.user.avatar, profilePopup.user.updatedAt)}
+                                                alt={profilePopup.user.username}
+                                                className="ds-profile-avatar"
+                                            />
+                                        )}
+                                        <h3>{profilePopup.user.username}</h3>
+                                        {profilePopup.user.bio && <p className="ds-profile-bio">{profilePopup.user.bio}</p>}
+                                        {profilePopup.user.createdAt && (
+                                            <p className="ds-profile-joined">Member since {new Date(profilePopup.user.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'long' })}</p>
+                                        )}
+                                    </div>
+
+                                    {/* Aesthetic Tags */}
+                                    {profilePopup.aura?.aestheticTags?.length > 0 && (
+                                        <div className="ds-profile-section">
+                                            <label>AESTHETIC MARKERS</label>
+                                            <div className="ds-profile-tags">
+                                                {profilePopup.aura.aestheticTags.map(tag => (
+                                                    <span key={tag} className="ds-profile-tag">{tag}</span>
+                                                ))}
+                                            </div>
+                                        </div>
                                     )}
-                                    <h3>{profilePopup.user.username}</h3>
-                                    {profilePopup.user.bio && <p className="ds-profile-bio">{profilePopup.user.bio}</p>}
-                                    {profilePopup.user.socialMediaLinks?.length > 0 && (
-                                        <div className="ds-profile-socials">
-                                            {profilePopup.user.socialMediaLinks.map((link, i) => {
-                                                const platform = (link.platform || 'other').toLowerCase();
-                                                return (
-                                                    <a
+
+                                    {/* Aura Colors */}
+                                    {profilePopup.aura?.auraColors?.length > 0 && (
+                                        <div className="ds-profile-section">
+                                            <label>VIBE SIGNATURE</label>
+                                            <div className="ds-profile-aura">
+                                                {profilePopup.aura.auraColors.map((color, i) => (
+                                                    <div
                                                         key={i}
-                                                        href={link.url}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className={`ds-profile-social-link ds-profile-social-link--${platform}`}
-                                                        title={getPlatformLabel(link.platform)}
-                                                    >
-                                                        {getPlatformIcon(link.platform)}
-                                                    </a>
-                                                );
-                                            })}
+                                                        className="ds-profile-aura-dot"
+                                                        style={{ backgroundColor: color }}
+                                                        title={color}
+                                                    />
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Top Categories */}
+                                    {profilePopup.aura?.topCategories?.length > 0 && (
+                                        <div className="ds-profile-section">
+                                            <label>CONTENT DISTRIBUTION</label>
+                                            <div className="ds-profile-categories">
+                                                {profilePopup.aura.topCategories.map(cat => (
+                                                    <div key={cat.category} className="ds-profile-cat-row">
+                                                        <span className="ds-profile-cat-name">{cat.category}</span>
+                                                        <div className="ds-profile-cat-bar">
+                                                            <div className="ds-profile-cat-fill" style={{ width: `${cat.percentage}%` }} />
+                                                        </div>
+                                                        <span className="ds-profile-cat-pct">{cat.percentage}%</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Recent Shares */}
+                                    {profilePopup.aura?.recentShares?.length > 0 && (
+                                        <div className="ds-profile-section">
+                                            <label>RECENT CURATIONS</label>
+                                            <div className="ds-profile-shares">
+                                                {profilePopup.aura.recentShares.slice(0, 6).map((share, i) => (
+                                                    <div key={share.id || i} className="ds-profile-share">
+                                                        {share.image && <img src={share.image} alt={share.title || 'Share'} />}
+                                                        <span className="ds-profile-share-title">{share.title}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Badges */}
+                                    {Array.isArray(profilePopup.badges) && profilePopup.badges.length > 0 && (
+                                        <div className="ds-profile-section">
+                                            <label>BADGES</label>
+                                            <div className="ds-profile-badges">
+                                                {profilePopup.badges.filter(b => b.unlocked).slice(0, 8).map(badge => (
+                                                    <div key={badge.id} className="ds-profile-badge" title={badge.description || badge.name}>
+                                                        <span className="ds-profile-badge-name">{badge.name}</span>
+                                                        <span className={`ds-profile-badge-rarity ds-profile-badge-rarity--${(badge.rarity || '').toLowerCase()}`}>{badge.rarity}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Social Media Links */}
+                                    {profilePopup.user.socialMediaLinks?.length > 0 && (
+                                        <div className="ds-profile-section">
+                                            <label>SOCIAL PROFILES</label>
+                                            <div className="ds-profile-socials">
+                                                {profilePopup.user.socialMediaLinks.map((link, i) => {
+                                                    const platform = (link.platform || 'other').toLowerCase();
+                                                    return (
+                                                        <a
+                                                            key={i}
+                                                            href={link.url}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className={`ds-profile-social-link ds-profile-social-link--${platform}`}
+                                                            title={getPlatformLabel(link.platform)}
+                                                        >
+                                                            {getPlatformIcon(link.platform)}
+                                                        </a>
+                                                    );
+                                                })}
+                                            </div>
                                         </div>
                                     )}
                                 </div>
