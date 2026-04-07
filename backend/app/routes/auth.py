@@ -3,10 +3,10 @@ from flask_jwt_extended import create_access_token
 from sqlalchemy.exc import IntegrityError
 from email_validator import validate_email, EmailNotValidError
 from datetime import datetime
-import random
 import re
 from app.database import get_db
 from app.models.user import User
+from app.services.avatar_service import generate_random_avatar_url
 from app.services.email_service import send_verification_email, send_password_reset_email
 
 auth_bp = Blueprint('auth', __name__)
@@ -252,8 +252,7 @@ def register():
                     'message': 'Username already exists'
                 }), 409
         
-        avatar_index = random.randint(1, 27)
-        avatar_url = f"https://cdn.jsdelivr.net/gh/alohe/avatars/png/vibrent_{avatar_index}.png"
+        avatar_url = generate_random_avatar_url()
 
         # Create new user (unverified)
         new_user = User(

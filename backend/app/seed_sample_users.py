@@ -1,6 +1,7 @@
 from typing import Dict, List
 
 from app.models.user import User
+from app.services.avatar_service import generate_random_avatar_url
 
 
 SAMPLE_USERS: List[Dict[str, object]] = [
@@ -54,6 +55,7 @@ def seed_sample_users(db) -> int:
         user = User(
             email=str(user_data["email"]),
             username=str(user_data["username"]),
+            avatar=generate_random_avatar_url(),
             bio=str(user_data["bio"]),
             email_verified=True,
             aura_colors=user_data["aura_colors"],
